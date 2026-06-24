@@ -74,7 +74,7 @@ async function procesarPedido(idJoya) {
 
     try {
         // Invocamos la ruta POST de Flask[cite: 3]
-        const respuesta = await fetch('http://localhost:5000/api/reservar-pieza', {
+        const respuesta = await fetch('https://joyeria-aura.onrender.com', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(cargaUtil)
