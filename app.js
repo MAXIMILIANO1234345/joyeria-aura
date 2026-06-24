@@ -74,7 +74,8 @@ async function procesarPedido(idJoya) {
 
     try {
   // Cambia la dirección local por tu URL real de Render:
-const respuesta = await fetch('https://joyeria-aura.onrender.com', {
+// Asegúrate de incluir '/api/reservar-pieza' al final de la URL:
+const respuesta = await fetch('https://joyeria-aura.onrender.com/api/reservar-pieza', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(cargaUtil)
