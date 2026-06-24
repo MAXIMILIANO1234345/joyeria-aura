@@ -53,13 +53,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     /* =========================================================
-       3. RECEPTOR DE ADUANA (Retorno de PayPal)
+       3. RECEPTOR DE ADUANA VIP (Disparo de Certificado)
        ========================================================= */
     const parametrosURL = new URLSearchParams(window.location.search);
-    if (parametrosURL.get('transaccion') === 'aprobada') {
+    const estatusTransaccion = parametrosURL.get('transaccion');
+    const ordenUuid = parametrosURL.get('orden_uuid');
+
+    if (estatusTransaccion === 'aprobada' && ordenUuid) {
+        // Limpiamos la URL para que no se vuelva a disparar si el cliente recarga la página
         window.history.replaceState({}, document.title, window.location.pathname);
-        alert("💎 ¡PAGO APROBADO POR VISA/MASTERCARD!\n\nTu orden ha sido capturada en firme por la bóveda. El taller ha iniciado el proceso de forjado de tu pieza.");
-    } else if (parametrosURL.get('transaccion') === 'cancelada') {
+
+        alert("💎 ¡PAGO APROBADO EN FIRME!\n\nTu inversión ha sido capturada por la Bóveda Central. Estamos forjando tu Certificado VIP de Propiedad y despachándolo al correo...");
+
+        // Tocamos la puerta de Python para que dispare el correo de Gmail
+        fetch('https://joyeria-aura-42ax.onrender.com/api/confirmar-compra', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orden_uuid: ordenUuid })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.estatus === 'CONFIRMADO' && data.correo_enviado) {
+                alert(`✉️ ¡CERTIFICADO DESPACHADO CON ÉXITO!\n\nSe ha enviado un documento con calidad editorial a la bandeja de: ${data.email}\n\n(Por favor verifica también tu buzón de correo no deseado / SPAM).\n\n¡Bienvenido al exclusivo círculo de coleccionistas de AURA!`);
+            } else {
+                alert("⚠️ El pago está asegurado, pero hubo una demora al entregar el correo. El taller central te contactará directamente.");
+            }
+        })
+        .catch(err => {
+            console.error("Error al certificar:", err);
+            alert("Tu pago fue procesado correctamente por la bóveda, pero no pudimos emitir el recibo digital por correo.");
+        });
+
+    } else if (estatusTransaccion === 'cancelada') {
         alert("Transacción pausada. Tu pieza seguirá reservada en bóveda por los próximos 15 minutos.");
     }
 
@@ -75,7 +100,7 @@ async function procesarPedido(idJoya) {
 
     const boton = document.querySelector('.btn-checkout');
     if (boton) {
-        boton.innerText = "Consultando a la Bóveda...";
+        boton.innerText = "Asegurando pieza en bóveda...";
         boton.disabled = true;
     }
 
@@ -85,39 +110,24 @@ async function procesarPedido(idJoya) {
     };
 
     try {
-        // Reemplaza el fetch de app.js con tu dirección real:
-const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/reservar-pieza', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(cargaUtil)
-});
+        const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/reservar-pieza', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cargaUtil)
+        });
 
-        // ====================================================================
-        // EL ESTETOSCOPIO: Capturamos la verdad cruda antes de que Chrome explote
-        // ====================================================================
-        const estatusHTTP = respuesta.status;
-        const textoCrudo = await respuesta.text(); 
+        const datos = await respuesta.json();
 
-        console.log(`[DIAGNÓSTICO] Código de estatus devuelto por Render: ${estatusHTTP}`);
-        console.log(`[DIAGNÓSTICO] Respuesta cruda del servidor: "${textoCrudo}"`);
-
-        if (!textoCrudo || textoCrudo.trim() === "") {
-            throw new Error(`El servidor respondió con código ${estatusHTTP}, pero el mensaje vino 100% vacío. Python se estrelló por dentro.`);
-        }
-
-        const datos = JSON.parse(textoCrudo);
-
-        if (estatusHTTP === 200) {
-            alert(`¡Éxito! Pieza reservada.\nUUID: ${datos.orden_uuid}\n\nAbriendo pasarela...`);
+        if (respuesta.status === 200) {
+            alert(`¡Éxito! Pieza reservada con el UUID:\n${datos.orden_uuid}\n\nAbriendo pasarela segura...`);
             window.location.href = datos.url_pasarela; 
         } else {
             alert(`Aviso de Bóveda: ${datos.mensaje || 'Transacción rechazada'}`);
             if (boton) { boton.innerText = "Completar el Pedido"; boton.disabled = false; }
         }
-
     } catch (error) {
-        console.error("Resultado del análisis forense:", error);
-        alert(`Fallo de transmisión: ${error.message}`);
+        console.error("El backend no responde:", error);
+        alert("No se pudo contactar con el taller central. Verifica que tu conexión sea estable.");
         if (boton) { boton.innerText = "Completar el Pedido"; boton.disabled = false; }
     }
 }
