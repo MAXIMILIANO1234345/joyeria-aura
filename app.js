@@ -75,7 +75,7 @@ async function procesarPedido(idJoya) {
 
     const boton = document.querySelector('.btn-checkout');
     if (boton) {
-        boton.innerText = "Asegurando pieza en bóveda...";
+        boton.innerText = "Consultando a la Bóveda...";
         boton.disabled = true;
     }
 
@@ -91,30 +91,32 @@ async function procesarPedido(idJoya) {
             body: JSON.stringify(cargaUtil)
         });
 
-        const datos = await respuesta.json();
+        // ====================================================================
+        // EL ESTETOSCOPIO: Capturamos la verdad cruda antes de que Chrome explote
+        // ====================================================================
+        const estatusHTTP = respuesta.status;
+        const textoCrudo = await respuesta.text(); 
 
-        if (respuesta.status === 200) {
-            alert(`¡Éxito! Pieza reservada con el UUID:\n${datos.orden_uuid}\n\nAbriendo pasarela segura...`);
+        console.log(`[DIAGNÓSTICO] Código de estatus devuelto por Render: ${estatusHTTP}`);
+        console.log(`[DIAGNÓSTICO] Respuesta cruda del servidor: "${textoCrudo}"`);
+
+        if (!textoCrudo || textoCrudo.trim() === "") {
+            throw new Error(`El servidor respondió con código ${estatusHTTP}, pero el mensaje vino 100% vacío. Python se estrelló por dentro.`);
+        }
+
+        const datos = JSON.parse(textoCrudo);
+
+        if (estatusHTTP === 200) {
+            alert(`¡Éxito! Pieza reservada.\nUUID: ${datos.orden_uuid}\n\nAbriendo pasarela...`);
             window.location.href = datos.url_pasarela; 
-        } else if (respuesta.status === 409) {
-            alert(`Lo sentimos: ${datos.mensaje}`);
-            if (boton) {
-                boton.innerText = "Completar el Pedido";
-                boton.disabled = false;
-            }
         } else {
-            alert(`Error de transacción: ${datos.mensaje}`);
-            if (boton) {
-                boton.innerText = "Completar el Pedido";
-                boton.disabled = false;
-            }
+            alert(`Aviso de Bóveda: ${datos.mensaje || 'Transacción rechazada'}`);
+            if (boton) { boton.innerText = "Completar el Pedido"; boton.disabled = false; }
         }
+
     } catch (error) {
-        console.error("El backend no responde:", error);
-        alert("No se pudo contactar con el taller central. Verifica que el servidor de Render esté encendido.");
-        if (boton) {
-            boton.innerText = "Completar el Pedido";
-            boton.disabled = false;
-        }
+        console.error("Resultado del análisis forense:", error);
+        alert(`Fallo de transmisión: ${error.message}`);
+        if (boton) { boton.innerText = "Completar el Pedido"; boton.disabled = false; }
     }
 }
