@@ -4,12 +4,10 @@ document.addEventListener('DOMContentLoaded', () => {
        1. SCROLL REVEAL (Galería)
        ========================================================= */
     const reveals = document.querySelectorAll('.reveal');
-    
     const revealObserver = new IntersectionObserver((entries, observer) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 entry.target.classList.add('active');
-                // [AGREGADO PRO]: Desconectar el observador una vez revelado
                 observer.unobserve(entry.target); 
             }
         });
@@ -25,8 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const irisMask = document.querySelector('.iris-mask');
 
     if (irisWrapper && irisMask) {
-        let ticking = false; // Candado para el motor de frames
-
+        let ticking = false;
         window.addEventListener('scroll', () => {
             if (!ticking) {
                 window.requestAnimationFrame(() => {
@@ -47,18 +44,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const circleSize = progress * 150; 
                     irisMask.style.clipPath = `circle(${circleSize}% at 50% 50%)`;
-
-                    ticking = false; // Liberar el candado
+                    ticking = false;
                 });
-
-                ticking = true; // Bloquear hasta el siguiente frame
+                ticking = true;
             }
-        }, { passive: true }); // [AGREGADO PRO]: Alerta de scroll fluido
+        }, { passive: true });
+    }
+
+
+    /* =========================================================
+       3. RECEPTOR DE ADUANA (Retorno de PayPal)
+       ========================================================= */
+    const parametrosURL = new URLSearchParams(window.location.search);
+    if (parametrosURL.get('transaccion') === 'aprobada') {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        alert("💎 ¡PAGO APROBADO POR VISA/MASTERCARD!\n\nTu orden ha sido capturada en firme por la bóveda. El taller ha iniciado el proceso de forjado de tu pieza.");
+    } else if (parametrosURL.get('transaccion') === 'cancelada') {
+        alert("Transacción pausada. Tu pieza seguirá reservada en bóveda por los próximos 15 minutos.");
     }
 
 });
 
-// Esta función se comunicará con Python en el puerto 5000
+
+/* =========================================================
+   4. FUNCIÓN TRANSACCIONAL GLOBAL (Invocada por index.html)
+   ========================================================= */
 async function procesarPedido(idJoya) {
     const emailCliente = prompt("Para registrar el certificado de la pieza, ingresa tu correo electrónico:");
     if (!emailCliente) return;
@@ -75,7 +85,6 @@ async function procesarPedido(idJoya) {
     };
 
     try {
-        // Apuntando exactamente a la puerta de Render:
         const respuesta = await fetch('https://joyeria-aura.onrender.com/api/reservar-pieza', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -109,18 +118,3 @@ async function procesarPedido(idJoya) {
         }
     }
 }
-// =================================================================
-// RECEPTOR DE ADUANA (Detecta cuando vienes de regreso de PayPal)
-// =================================================================
-window.addEventListener('DOMContentLoaded', () => {
-    const parametrosURL = new URLSearchParams(window.location.search);
-    
-    if (parametrosURL.get('transaccion') === 'aprobada') {
-        // Limpiamos la URL para que no se quede el texto feo arriba
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        alert("💎 ¡PAGO APROBADO POR VISA/MASTERCARD!\n\nTu orden ha sido capturada en firme por la bóveda. El taller ha iniciado el proceso de forjado de tu pieza.");
-    } else if (parametrosURL.get('transaccion') === 'cancelada') {
-        alert("Transacción pausada. Tu pieza seguirá reservada en bóveda por los próximos 15 minutos.");
-    }
-});
