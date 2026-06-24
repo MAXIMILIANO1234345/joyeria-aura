@@ -1,0 +1,5 @@
+# El cadenero prohíbe subir a internet estos archivos:
+.env
+__pycache__/
+venv/
+.DS_Store
