@@ -25,27 +25,28 @@ def obtener_token_paypal():
     auth = (os.getenv("PAYPAL_CLIENT_ID"), os.getenv("PAYPAL_SECRET"))
     return requests.post(url, data=data, auth=auth).json()["access_token"]
 
-def enviar_certificado_email(destinatario, nombre_joya, folio):
+def enviar_certificado_html(destinatario, nombre_pieza, uuid_orden, precio_mxn):
     remitente = os.getenv("EMAIL_TALLER")
-    password = os.getenv("EMAIL_PASSWORD")
+    password = os.getenv("EMAIL_PASSWORD") # Asegúrate que sean las 16 letras sin espacios
     
     msg = MIMEMultipart()
     msg['From'] = f"AURA Alta Joyería <{remitente}>"
     msg['To'] = destinatario
-    msg['Subject'] = "💎 Certificado de Autenticidad AURA"
+    msg['Subject'] = f"💎 Certificado de Propiedad: {nombre_pieza}"
     
-    html = f"<html><body><h1>Certificado AURA</h1><p>Gracias por tu compra de: {nombre_joya}</p><p>Folio: {folio}</p></body></html>"
+    html = f"<html><body><h1>Certificado AURA</h1><p>Pieza: {nombre_pieza}</p><p>Folio: {uuid_orden}</p></body></html>"
     msg.attach(MIMEText(html, 'html'))
     
     try:
-        with smtplib.SMTP('smtp.gmail.com', 587) as server:
-            server.starttls()
-            server.login(remitente, password)
-            server.send_message(msg)
+        # Usamos SMTP_SSL que es más estable para servicios en la nube
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login(remitente, password)
+        server.send_message(msg)
+        server.quit()
         return True
-    except:
+    except Exception as e:
+        print(f"❌ ERROR SMTP DETALLADO: {str(e)}")
         return False
-
 # --- RUTAS ---
 @app.route('/api/reservar-pieza', methods=['POST'])
 def reservar_pieza():
