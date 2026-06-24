@@ -72,8 +72,17 @@ def liquidar_y_certificar():
     data = request.json
     uuid_orden = data.get('orden_uuid')
     
-    try:
-        res_orden = boveda.table('ordenes_compra').select('joya_id, usuario_email, estado').eq('id', uuid_orden).execute()
+try:
+        # Aquí estamos agregando 'cantidad': 1 para cumplir con el contrato de la base de datos
+        res_boveda = boveda.table('ordenes_compra').insert({
+            'usuario_email': email_cliente,
+            'joya_id': int(id_joya),
+            'estado': 'PENDIENTE_PAYPAL',
+            'cantidad': 1 
+        }).execute()
+        
+        uuid_orden = res_boveda.data[0]['id']
+        # ... resto del código ...
         if not res_orden.data:
             return jsonify({"mensaje": "Orden no localizada"}), 404
 
