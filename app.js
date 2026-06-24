@@ -74,7 +74,7 @@ async function procesarPedido(idJoya) {
 
     try {
   // Cambia la dirección local por tu URL real de Render:
-const respuesta = await fetch('https://aura-boveda-api.onrender.com/api/reservar-pieza', {
+const respuesta = await fetch('https://joyeria-aura.onrender.com', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(cargaUtil)
