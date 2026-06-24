@@ -10,7 +10,9 @@ load_dotenv()
 app = Flask(__name__)
 
 # MODO NUCLEAR: Permitimos cualquier origen, cualquier método y cualquier cabecera
-CORS(app, resources={r"/*": {"origins": "*"}})
+app.use(cors({
+    origin: ['http://localhost:3000', 'https://maximiliano1234345.github.io']
+}));
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY")
