@@ -85,7 +85,7 @@ async function procesarPedido(idJoya) {
     };
 
     try {
-        const respuesta = await fetch('https://joyeria-aura.onrender.com/api/reservar-pieza', {
+        const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(cargaUtil)
