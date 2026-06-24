@@ -34,8 +34,18 @@ def obtener_gafete_paypal():
     return respuesta.json()["access_token"]
 
 
-@app.route('/api/reservar-pieza', methods=['POST'])
+@app.route('/api/reservar-pieza', methods=['POST', 'OPTIONS'])
 def despachar_transaccion():
+    # ====================================================================
+    # ESCUDO ANTI-PREFLIGHT: Si Chrome viene a husmear, le damos luz verde
+    # ====================================================================
+    if request.method == 'OPTIONS':
+        respuesta_preflight = jsonify({"mensaje": "Pase usted, Chrome"})
+        respuesta_preflight.headers.add('Access-Control-Allow-Origin', '*')
+        respuesta_preflight.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        respuesta_preflight.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return respuesta_preflight, 200
+
     paquete_js = request.json
     email_cliente = paquete_js.get('email')
     id_joya = paquete_js.get('joya_id')
@@ -44,7 +54,7 @@ def despachar_transaccion():
         return jsonify({"mensaje": "Faltan credenciales de inspección"}), 400
 
     try:
-        # 1. DISPARAMOS EL CANDADO PESIMISTA EN POSTGRESQL
+        # 1. RESERVA EN SUPABASE
         res_boveda = boveda.rpc('reservar_pieza_para_pago', {
             'p_joya_id': int(id_joya),
             'p_cantidad': 1,
@@ -53,17 +63,13 @@ def despachar_transaccion():
 
         uuid_orden_supabase = res_boveda.data
 
-        # 2. SEGUNDA LEY DE SEGURIDAD: Consultamos el precio REAL en la base de datos
-        # (Jamás le creemos al precio que nos mande el archivo app.js)
+        # 2. CONSULTA DE PRECIO REAL
         info_joya = boveda.table('joyas_stock').select('precio_centavos', 'nombre').eq('id', int(id_joya)).execute()
-        
         precio_en_centavos = info_joya.data[0]['precio_centavos']
         nombre_pieza = info_joya.data[0]['nombre']
-        
-        # Convertimos los centavos enteros (1680000) al formato string que exige PayPal ("16800.00")
         precio_formato_paypal = f"{(precio_en_centavos / 100.0):.2f}"
 
-        # 3. SOLICITAMOS LA APERTURA DE TERMINAL A PAYPAL
+        # 3. APERTURA DE TERMINAL PAYPAL
         token_paypal = obtener_gafete_paypal()
         url_ordenes_pp = "https://api-m.sandbox.paypal.com/v2/checkout/orders"
         
@@ -72,11 +78,10 @@ def despachar_transaccion():
             "Authorization": f"Bearer {token_paypal}"
         }
 
-        # El manifiesto de cobro que verá el cliente en su pantalla de Visa/Mastercard:
         payload_pp = {
             "intent": "CAPTURE",
             "purchase_units": [{
-                "reference_id": str(uuid_orden_supabase), # Enlazamos el UUID de Postgres con el recibo de PayPal
+                "reference_id": str(uuid_orden_supabase),
                 "amount": {
                     "currency_code": "MXN",
                     "value": precio_formato_paypal
@@ -84,24 +89,19 @@ def despachar_transaccion():
                 "description": f"Pieza AURA: {nombre_pieza} (Certificado para {email_cliente})"
             }],
             "application_context": {
-                "brand_name": "AURA | ALTA JOYERÍA", # Sello de lujo en la cabecera del banco
+                "brand_name": "AURA | ALTA JOYERÍA",
                 "landing_page": "LOGIN",
                 "user_action": "PAY_NOW",
-                # A dónde va a escupir PayPal al cliente cuando termine de teclear su tarjeta:
-                "return_url": "http://127.0.0.1:5500/index.html?transaccion=aprobada",
-                "cancel_url": "http://127.0.0.1:5500/index.html?transaccion=cancelada"
+                # ACTUALIZADO: Apuntando a tu dominio internacional de GitHub Pages
+                "return_url": "https://maximiliano1234345.github.io/joyeria-aura/index.html?transaccion=aprobada",
+                "cancel_url": "https://maximiliano1234345.github.io/joyeria-aura/index.html?transaccion=cancelada"
             }
         }
 
         respuesta_paypal = requests.post(url_ordenes_pp, headers=headers_pp, json=payload_pp).json()
-
-        # Extraemos el enlace de pago seguro de entre la basura de datos que contesta PayPal
         enlace_aprobacion = next(item['href'] for item in respuesta_paypal['links'] if item['rel'] == 'approve')
 
-        # Le inyectamos a nuestra fila de Supabase el ID de rastreo que le asignó PayPal
         boveda.table('ordenes_compra').update({"paypal_order_id": respuesta_paypal['id']}).eq('id', uuid_orden_supabase).execute()
-
-        print(f"🔗 [TERMINAL ABIERTA]: Pasarela lista para orden -> {uuid_orden_supabase}")
 
         return jsonify({
             "estatus": "EXITO",
@@ -109,6 +109,9 @@ def despachar_transaccion():
             "url_pasarela": enlace_aprobacion
         }), 200
 
+    except Exception as e:
+        print(f"❌ [FALLO DE BÓVEDA]: {e}")
+        return jsonify({"mensaje": "La pieza solicitada acaba de ser reservada por otro coleccionista."}), 409
     except Exception as e:
         print(f"❌ [FALLO DE BÓVEDA]: {e}")
         return jsonify({"mensaje": "La pieza solicitada acaba de ser reservada por otro coleccionista."}), 409
