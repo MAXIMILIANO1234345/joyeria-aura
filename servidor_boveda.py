@@ -1,43 +1,42 @@
 import os
 import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import traceback
 import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from supabase import create_client, Client
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from supabase import create_client
 from dotenv import load_dotenv
-import traceback
 
 load_dotenv()
 
 app = Flask(__name__)
-# CORS simplificado y reforzado: abre la puerta a todo
+# CORS configurado para permitir todo desde cualquier origen
 CORS(app)
 
-url_supabase = os.getenv("SUPABASE_URL")
-clave_supabase = os.getenv("SUPABASE_SECRET_KEY")
-boveda = create_client(url_supabase, clave_supabase)
+# Inicializar Supabase
+boveda = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SECRET_KEY"))
 
-# --- Funciones auxiliares (PayPal, Correo) se mantienen igual ---
-def obtener_gafete_paypal():
+# --- FUNCIONES DE SERVICIO ---
+def obtener_token_paypal():
     url = "https://api-m.sandbox.paypal.com/v1/oauth2/token"
-    headers = {"Accept": "application/json", "Accept-Language": "en_US"}
     data = {"grant_type": "client_credentials"}
-    client_id = os.getenv("PAYPAL_CLIENT_ID")
-    secret = os.getenv("PAYPAL_SECRET")
-    respuesta = requests.post(url, headers=headers, data=data, auth=(client_id, secret))
-    return respuesta.json()["access_token"]
+    auth = (os.getenv("PAYPAL_CLIENT_ID"), os.getenv("PAYPAL_SECRET"))
+    return requests.post(url, data=data, auth=auth).json()["access_token"]
 
-def enviar_certificado_html(destinatario, nombre_pieza, uuid_orden, precio_mxn):
+def enviar_certificado_email(destinatario, nombre_joya, folio):
     remitente = os.getenv("EMAIL_TALLER")
     password = os.getenv("EMAIL_PASSWORD")
+    
     msg = MIMEMultipart()
     msg['From'] = f"AURA Alta Joyería <{remitente}>"
     msg['To'] = destinatario
-    msg['Subject'] = f"💎 Certificado de Propiedad: {nombre_pieza}"
-    html = f"<html><body><h1>Certificado AURA</h1><p>Pieza: {nombre_pieza}</p><p>Folio: {uuid_orden}</p></body></html>"
+    msg['Subject'] = "💎 Certificado de Autenticidad AURA"
+    
+    html = f"<html><body><h1>Certificado AURA</h1><p>Gracias por tu compra de: {nombre_joya}</p><p>Folio: {folio}</p></body></html>"
     msg.attach(MIMEText(html, 'html'))
+    
     try:
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
             server.starttls()
@@ -49,48 +48,68 @@ def enviar_certificado_html(destinatario, nombre_pieza, uuid_orden, precio_mxn):
 
 # --- RUTAS ---
 @app.route('/api/reservar-pieza', methods=['POST'])
-def despachar_transaccion():
-    paquete_js = request.json
-    email_cliente = paquete_js.get('email')
-    id_joya = paquete_js.get('joya_id')
-
+def reservar_pieza():
     try:
-        res_boveda = boveda.table('ordenes_compra').insert({
-            'usuario_email': email_cliente,
-            'joya_id': int(id_joya),
+        data = request.json
+        email = data.get('email')
+        joya_id = int(data.get('joya_id'))
+
+        # 1. Obtener precio de la joya para cumplir restricciones SQL
+        res_joya = boveda.table('joyas_stock').select('nombre, precio_centavos').eq('id', joya_id).execute()
+        joya_info = res_joya.data[0]
+        precio = joya_info['precio_centavos']
+
+        # 2. Insertar en ordenes_compra (Cumpliendo NOT NULL de cantidad y monto)
+        res_orden = boveda.table('ordenes_compra').insert({
+            'usuario_email': email,
+            'joya_id': joya_id,
+            'cantidad': 1,
+            'monto_total_centavos': precio,
             'estado': 'PENDIENTE_PAYPAL'
         }).execute()
         
-        uuid_orden = res_boveda.data[0]['id']
-        # ... lógica PayPal ...
-        return jsonify({"orden_uuid": uuid_orden, "url_pasarela": "https://sandbox.paypal.com/..."}), 200
+        orden_uuid = res_orden.data[0]['id']
+
+        # 3. Crear orden en PayPal
+        token = obtener_token_paypal()
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
+        payload = {
+            "intent": "CAPTURE",
+            "purchase_units": [{"amount": {"currency_code": "MXN", "value": f"{precio/100:.2f}"}}],
+            "application_context": {
+                "return_url": f"https://maximiliano1234345.github.io/joyeria-aura/index.html?transaccion=aprobada&orden_uuid={orden_uuid}",
+                "cancel_url": "https://maximiliano1234345.github.io/joyeria-aura/index.html?transaccion=cancelada"
+            }
+        }
+        paypal_res = requests.post("https://api-m.sandbox.paypal.com/v2/checkout/orders", headers=headers, json=payload).json()
+        
+        # 4. Actualizar PayPal ID
+        boveda.table('ordenes_compra').update({"paypal_order_id": paypal_res['id']}).eq('id', orden_uuid).execute()
+        
+        enlace = next(item['href'] for item in paypal_res['links'] if item['rel'] == 'approve')
+        return jsonify({"orden_uuid": orden_uuid, "url_pasarela": enlace}), 200
+
     except Exception as e:
-        return jsonify({"mensaje": str(e)}), 400
+        print(f"ERROR: {traceback.format_exc()}")
+        return jsonify({"mensaje": str(e)}), 500
 
 @app.route('/api/confirmar-compra', methods=['POST'])
-def liquidar_y_certificar():
-    data = request.json
-    uuid_orden = data.get('orden_uuid')
-    
-try:
-        # Aquí estamos agregando 'cantidad': 1 para cumplir con el contrato de la base de datos
-        res_boveda = boveda.table('ordenes_compra').insert({
-            'usuario_email': email_cliente,
-            'joya_id': int(id_joya),
-            'estado': 'PENDIENTE_PAYPAL',
-            'cantidad': 1 
-        }).execute()
-        
-        uuid_orden = res_boveda.data[0]['id']
-        # ... resto del código ...
-        if not res_orden.data:
-            return jsonify({"mensaje": "Orden no localizada"}), 404
-
-        # Actualización de estado
+def confirmar_compra():
+    uuid_orden = request.json.get('orden_uuid')
+    try:
+        # Actualizar a PAGADO
         boveda.table('ordenes_compra').update({"estado": "PAGADO"}).eq('id', uuid_orden).execute()
+        
+        # Obtener datos para correo
+        res = boveda.table('ordenes_compra').select('joya_id, usuario_email').eq('id', uuid_orden).execute()
+        res_joya = boveda.table('joyas_stock').select('nombre').eq('id', res.data[0]['joya_id']).execute()
+        
+        enviar_certificado_email(res.data[0]['usuario_email'], res_joya.data[0]['nombre'], uuid_orden)
+        
         return jsonify({"estatus": "CONFIRMADO"}), 200
-    except Exception:
-        return jsonify({"mensaje": "Error interno"}), 500
+    except Exception as e:
+        print(f"ERROR CONFIRMACION: {traceback.format_exc()}")
+        return jsonify({"mensaje": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run()
+    app.run(port=5000)
