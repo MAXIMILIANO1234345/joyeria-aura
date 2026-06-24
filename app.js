@@ -103,3 +103,18 @@ async function procesarPedido(idJoya) {
         boton.disabled = false;
     }
 }
+// =================================================================
+// RECEPTOR DE ADUANA (Detecta cuando vienes de regreso de PayPal)
+// =================================================================
+window.addEventListener('DOMContentLoaded', () => {
+    const parametrosURL = new URLSearchParams(window.location.search);
+    
+    if (parametrosURL.get('transaccion') === 'aprobada') {
+        // Limpiamos la URL para que no se quede el texto feo arriba
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        alert("💎 ¡PAGO APROBADO POR VISA/MASTERCARD!\n\nTu orden ha sido capturada en firme por la bóveda. El taller ha iniciado el proceso de forjado de tu pieza.");
+    } else if (parametrosURL.get('transaccion') === 'cancelada') {
+        alert("Transacción pausada. Tu pieza seguirá reservada en bóveda por los próximos 15 minutos.");
+    }
+});
