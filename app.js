@@ -60,12 +60,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const ordenUuid = parametrosURL.get('orden_uuid');
 
     if (estatusTransaccion === 'aprobada' && ordenUuid) {
-        // Limpiamos la URL para que no se vuelva a disparar si el cliente recarga la página
         window.history.replaceState({}, document.title, window.location.pathname);
 
         alert("💎 ¡PAGO APROBADO EN FIRME!\n\nTu inversión ha sido capturada por la Bóveda Central. Estamos forjando tu Certificado VIP de Propiedad y despachándolo al correo...");
 
-        // Tocamos la puerta de Python para que dispare el correo de Gmail
         fetch('https://joyeria-aura-42ax.onrender.com/api/confirmar-compra', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -74,7 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(res => res.json())
         .then(data => {
             if (data.estatus === 'CONFIRMADO' && data.correo_enviado) {
-                alert(`✉️ ¡CERTIFICADO DESPACHADO CON ÉXITO!\n\nSe ha enviado un documento con calidad editorial a la bandeja de: ${data.email}\n\n(Por favor verifica también tu buzón de correo no deseado / SPAM).\n\n¡Bienvenido al exclusivo círculo de coleccionistas de AURA!`);
+                alert("✉️ ¡CERTIFICADO DESPACHADO CON ÉXITO!\n\nSe ha enviado un documento con calidad editorial a la bandeja de: " + data.email + "\n\n(Por favor verifica también tu buzón de correo no deseado / SPAM).\n\n¡Bienvenido al exclusivo círculo de coleccionistas de AURA!");
+            } else if (data.estatus === 'YA_PROCESADO') {
+                alert("Aviso de Bóveda: " + data.mensaje);
             } else {
                 alert("⚠️ El pago está asegurado, pero hubo una demora al entregar el correo. El taller central te contactará directamente.");
             }
@@ -94,57 +94,40 @@ document.addEventListener('DOMContentLoaded', () => {
 /* =========================================================
    4. FUNCIÓN TRANSACCIONAL GLOBAL (Invocada por index.html)
    ========================================================= */
-@app.route('/api/confirmar-compra', methods=['POST', 'OPTIONS'])
-def liquidar_y_certificar():
-    if request.method == 'OPTIONS':
-        res = jsonify({"mensaje": "CORS OK"})
-        res.headers.add('Access-Control-Allow-Origin', '*')
-        res.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        res.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        return res, 200
+async function procesarPedido(idJoya) {
+    const emailCliente = prompt("Para registrar el certificado de la pieza, ingresa tu correo electrónico:");
+    if (!emailCliente) return;
 
-    data = request.json
-    uuid_orden = data.get('orden_uuid')
+    const boton = document.querySelector('.btn-checkout');
+    if (boton) {
+        boton.innerText = "Asegurando pieza en bóveda...";
+        boton.disabled = true;
+    }
 
-    if not uuid_orden:
-        return jsonify({"mensaje": "Falta el UUID de la orden"}), 400
+    const cargaUtil = {
+        email: emailCliente.trim(),
+        joya_id: idJoya
+    };
 
-    try:
-        # 1. Buscamos la orden en SQL
-        res_orden = boveda.table('ordenes_compra').select('joya_id, email_cliente, estatus').eq('id', uuid_orden).execute()
-        if not res_orden.data:
-            return jsonify({"mensaje": "Orden no localizada en la bóveda"}), 404
+    try {
+        const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/reservar-pieza', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cargaUtil)
+        });
 
-        joya_id = res_orden.data[0]['joya_id']
-        email_cliente = res_orden.data[0]['email_cliente']
-        estatus_actual = res_orden.data[0].get('estatus', 'PENDIENTE')
+        const datos = await respuesta.json();
 
-        # SEGURO ANTI-METRALLETA: Si el cliente recarga la página web 5 veces, no le disparamos 5 correos
-        if estatus_actual == 'PAGADO':
-            return jsonify({
-                "estatus": "YA_PROCESADO", 
-                "mensaje": "El certificado de esta pieza ya había sido emitido previamente."
-            }), 200
-
-        # ====================================================================
-        # MARTILLAZO SQL: Cambiamos oficialmente el estatus a 'PAGADO'
-        # ====================================================================
-        boveda.table('ordenes_compra').update({"estatus": "PAGADO"}).eq('id', uuid_orden).execute()
-
-        # 2. Extraemos datos de la joya para la carta
-        res_joya = boveda.table('joyas_stock').select('nombre, precio_centavos').eq('id', joya_id).execute()
-        nombre_joya = res_joya.data[0]['nombre']
-        precio_formateado = f"{(res_joya.data[0]['precio_centavos'] / 100.0):,.2f}"
-
-        # 3. Disparamos el cañón de Gmail
-        exito_mail = enviar_certificado_html(email_cliente, nombre_joya, uuid_orden, precio_formateado)
-
-        return jsonify({
-            "estatus": "CONFIRMADO",
-            "email": email_cliente,
-            "correo_enviado": exito_mail
-        }), 200
-
-    except Exception as e:
-        print(f"❌ [FALLO SQL / SMTP]: {e}")
-        return jsonify({"mensaje": "Error interno al estampar el certificado."}), 500
+        if (respuesta.status === 200) {
+            alert("¡Éxito! Pieza reservada con el UUID:\n" + datos.orden_uuid + "\n\nAbriendo pasarela segura...");
+            window.location.href = datos.url_pasarela; 
+        } else {
+            alert("Aviso de Bóveda: " + (datos.mensaje || "Transacción rechazada"));
+            if (boton) { boton.innerText = "Completar el Pedido"; boton.disabled = false; }
+        }
+    } catch (error) {
+        console.error("El backend no responde:", error);
+        alert("No se pudo contactar con el taller central. Verifica que tu conexión sea estable.");
+        if (boton) { boton.innerText = "Completar el Pedido"; boton.disabled = false; }
+    }
+}
