@@ -85,11 +85,12 @@ async function procesarPedido(idJoya) {
     };
 
     try {
-        const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(cargaUtil)
-        });
+        // Reemplaza el fetch de app.js con tu dirección real:
+const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/reservar-pieza', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(cargaUtil)
+});
 
         // ====================================================================
         // EL ESTETOSCOPIO: Capturamos la verdad cruda antes de que Chrome explote
