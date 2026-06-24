@@ -64,8 +64,10 @@ async function procesarPedido(idJoya) {
     if (!emailCliente) return;
 
     const boton = document.querySelector('.btn-checkout');
-    boton.innerText = "Asegurando pieza en bóveda...";
-    boton.disabled = true;
+    if (boton) {
+        boton.innerText = "Asegurando pieza en bóveda...";
+        boton.disabled = true;
+    }
 
     const cargaUtil = {
         email: emailCliente.trim(),
@@ -73,34 +75,38 @@ async function procesarPedido(idJoya) {
     };
 
     try {
-  // Cambia la dirección local por tu URL real de Render:
-// Asegúrate de incluir '/api/reservar-pieza' al final de la URL:
-const respuesta = await fetch('https://joyeria-aura.onrender.com/api/reservar-pieza'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(cargaUtil)
-});
+        // Apuntando exactamente a la puerta de Render:
+        const respuesta = await fetch('https://joyeria-aura.onrender.com/api/reservar-pieza', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cargaUtil)
+        });
+
         const datos = await respuesta.json();
 
         if (respuesta.status === 200) {
             alert(`¡Éxito! Pieza reservada con el UUID:\n${datos.orden_uuid}\n\nAbriendo pasarela segura...`);
-            // Te redirige al sandbox de PayPal con el token generado por Python[cite: 3]
             window.location.href = datos.url_pasarela; 
         } else if (respuesta.status === 409) {
-            // Si el procedimiento almacenado arrojó un rollback porque la pieza fue adquirida por otro coleccionista[cite: 3]
             alert(`Lo sentimos: ${datos.mensaje}`);
-            boton.innerText = "Completar el Pedido";
-            boton.disabled = false;
+            if (boton) {
+                boton.innerText = "Completar el Pedido";
+                boton.disabled = false;
+            }
         } else {
             alert(`Error de transacción: ${datos.mensaje}`);
-            boton.innerText = "Completar el Pedido";
-            boton.disabled = false;
+            if (boton) {
+                boton.innerText = "Completar el Pedido";
+                boton.disabled = false;
+            }
         }
     } catch (error) {
         console.error("El backend no responde:", error);
-        alert("No se pudo contactar con el taller central. Verifica que Flask esté corriendo.");
-        boton.innerText = "Completar el Pedido";
-        boton.disabled = false;
+        alert("No se pudo contactar con el taller central. Verifica que el servidor de Render esté encendido.");
+        if (boton) {
+            boton.innerText = "Completar el Pedido";
+            boton.disabled = false;
+        }
     }
 }
 // =================================================================
