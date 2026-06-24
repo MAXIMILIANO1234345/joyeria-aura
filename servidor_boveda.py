@@ -201,32 +201,33 @@ def liquidar_y_certificar():
         return jsonify({"mensaje": "Falta el UUID de la orden"}), 400
 
     try:
-        # 1. Buscamos qué joya compró y quién es el dueño:
-        res_orden = boveda.table('ordenes_compra').select('joya_id, email_cliente').eq('id', uuid_orden).execute()
+        # Buscamos la orden
+        res_orden = boveda.table('ordenes_compra').select('joya_id, email_cliente, estatus').eq('id', uuid_orden).execute()
         if not res_orden.data:
             return jsonify({"mensaje": "Orden no localizada"}), 404
 
         joya_id = res_orden.data[0]['joya_id']
         email_cliente = res_orden.data[0]['email_cliente']
 
-        # 2. Buscamos el nombre elegante y el precio de la joya:
+        # Buscamos la joya
         res_joya = boveda.table('joyas_stock').select('nombre, precio_centavos').eq('id', joya_id).execute()
         nombre_joya = res_joya.data[0]['nombre']
         precio_formateado = f"{(res_joya.data[0]['precio_centavos'] / 100.0):,.2f}"
 
-        # 3. Disparamos el misil de Gmail:
+        # ⚠️ AQUÍ ESTÁ EL CAMBIO: Imprimimos el error real en los LOGS de Render
+        print(f"DEBUG: Intentando enviar correo a {email_cliente}...")
         exito_mail = enviar_certificado_html(email_cliente, nombre_joya, uuid_orden, precio_formateado)
+        
+        if not exito_mail:
+            raise Exception("El servidor SMTP de Gmail rechazó las credenciales o hubo un error de red.")
 
-        return jsonify({
-            "estatus": "CONFIRMADO",
-            "email": email_cliente,
-            "correo_enviado": exito_mail
-        }), 200
+        boveda.table('ordenes_compra').update({"estatus": "PAGADO"}).eq('id', uuid_orden).execute()
+
+        return jsonify({"estatus": "CONFIRMADO", "email": email_cliente, "correo_enviado": True}), 200
 
     except Exception as e:
-        print(f"❌ [FALLO DE CONFIRMACIÓN]: {e}")
-        return jsonify({"mensaje": "Error interno al despachar el certificado"}), 500
-
-
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+        # ESTO ES LO QUE NECESITAMOS VER EN RENDER:
+        import traceback
+        error_completo = traceback.format_exc()
+        print(f"❌ [CRASH DETALLADO]: {error_completo}")
+        return jsonify({"mensaje": f"Error detallado: {str(e)}"}), 500
