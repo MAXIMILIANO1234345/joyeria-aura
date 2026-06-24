@@ -8,7 +8,18 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app) 
+# Busca donde dice CORS(app) y cámbialo por esto:
+CORS(app, resources={
+    r"/api/*": {
+        "origins": [
+            "https://maximiliano1234345.github.io",
+            "http://127.0.0.1:5500",
+            "http://localhost:5500"
+        ],
+        "methods": ["POST", "GET", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY")
