@@ -104,8 +104,20 @@ const catalogoJoyas = {
     3: { nombre: "Esencia Pura", precio: 3200, imagen: "https://images.unsplash.com/photo-1599643478524-fb66f7ca265b?q=80&w=200&auto=format&fit=crop" }
 };
 
-// Inicializar el carrito desde la memoria del navegador o crear uno vacío
-let carrito = JSON.parse(localStorage.getItem('carritoAura')) || [];
+/* --- NUEVO SISTEMA DE AUTO-SANACIÓN DEL CARRITO --- */
+// Leemos la memoria del navegador
+let carritoCrudo = JSON.parse(localStorage.getItem('carritoAura')) || [];
+
+// Filtramos cualquier pieza corrupta (por ejemplo, si el joya_id guardado viejo era un objeto en lugar de un número)
+let carrito = carritoCrudo.filter(item => item.joya_id !== null && typeof item.joya_id !== 'object');
+
+// Si se encontró basura y se limpió, guardamos el carrito limpio de vuelta para proteger el backend
+if (carritoCrudo.length !== carrito.length) {
+    localStorage.setItem('carritoAura', JSON.stringify(carrito));
+    console.warn("AURA: Se detectó y limpió información obsoleta en el carrito de compras.");
+}
+/* -------------------------------------------------- */
+
 
 // Actualizar la interfaz (Barra lateral, precios y contador)
 function actualizarUI() {
@@ -223,7 +235,7 @@ async function procesarCheckoutCarrito() {
         const datos = await respuesta.json();
 
         if (respuesta.status === 200) {
-            // Ya no usamos alert, redirigimos directo a la pasarela (o simulador)
+            // Ya no usamos alert, redirigimos directo a la pasarela
             localStorage.removeItem('carritoAura'); 
             carrito = []; 
             actualizarUI(); 
