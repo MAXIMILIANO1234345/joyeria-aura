@@ -88,17 +88,84 @@ document.addEventListener('DOMContentLoaded', () => {
         alert("Transacción pausada. Tu selección seguirá reservada en bóveda por los próximos 15 minutos.");
     }
 
+    // Inicializar la vista del carrito al cargar la página
+    actualizarUI();
 });
 
 
 /* =========================================================
-   4. SISTEMA DE CARRITO DE COMPRAS VIP (Local Storage)
+   4. SISTEMA DE CARRITO DE COMPRAS VIP (UI + Local Storage)
    ========================================================= */
+
+// Diccionario de productos para que el frontend sepa qué mostrar
+const catalogoJoyas = {
+    1: { nombre: "Solitario Eternidad", precio: 24500, imagen: "https://images.unsplash.com/photo-1605100804763-247f67b2548e?q=80&w=200&auto=format&fit=crop" },
+    2: { nombre: "Crossover Lumina", precio: 16800, imagen: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=200&auto=format&fit=crop" },
+    3: { nombre: "Esencia Pura", precio: 3200, imagen: "https://images.unsplash.com/photo-1599643478524-fb66f7ca265b?q=80&w=200&auto=format&fit=crop" }
+};
 
 // Inicializar el carrito desde la memoria del navegador o crear uno vacío
 let carrito = JSON.parse(localStorage.getItem('carritoAura')) || [];
 
-// Función para agregar una joya al carrito (Llamada desde los botones en tu HTML)
+// Actualizar la interfaz (Barra lateral, precios y contador)
+function actualizarUI() {
+    const contenedor = document.getElementById('contenedor-carrito');
+    const totalElement = document.getElementById('total-carrito');
+    const indicador = document.getElementById('cart-indicator');
+
+    // Si está vacío
+    if (carrito.length === 0) {
+        contenedor.innerHTML = `
+            <div class="text-center mt-5">
+                <p class="text-muted font-serif" style="font-size: 1.2rem; font-style: italic;">Tu reserva está vacía.</p>
+            </div>`;
+        totalElement.innerText = "$ 0 MXN";
+        indicador.style.display = 'none';
+        return;
+    }
+
+    // Si tiene productos, construimos el HTML
+    let htmlCarrito = '';
+    let total = 0;
+    let cantidadTotalPiezas = 0;
+
+    carrito.forEach((item, index) => {
+        const joya = catalogoJoyas[item.joya_id];
+        if (joya) {
+            const subtotal = joya.precio * item.cantidad;
+            total += subtotal;
+            cantidadTotalPiezas += item.cantidad;
+
+            htmlCarrito += `
+                <div class="cart-item d-flex align-items-center mb-4" style="border-bottom: 1px solid #eee; padding-bottom: 15px;">
+                    <img src="${joya.imagen}" alt="${joya.nombre}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px; margin-right: 15px;">
+                    <div class="cart-item-details flex-grow-1">
+                        <h6 class="cart-item-title font-serif mb-1" style="font-size: 1.1rem;">${joya.nombre}</h6>
+                        <p class="mb-1 text-muted" style="font-size: 0.8rem;">Cantidad: ${item.cantidad}</p>
+                        <p class="fw-medium mb-0" style="font-size: 0.9rem;">$ ${subtotal.toLocaleString()} MXN</p>
+                    </div>
+                    <button class="btn btn-sm" onclick="eliminarDelCarrito(${index})" style="background: none; border: none; color: var(--ciruela-oscuro); font-size: 1.2rem;">
+                        <i class="bi bi-x-circle"></i>
+                    </button>
+                </div>
+            `;
+        }
+    });
+
+    // Inyectamos el HTML al menú lateral
+    contenedor.innerHTML = htmlCarrito;
+    totalElement.innerText = `$ ${total.toLocaleString()} MXN`;
+    
+    // Actualizamos el puntito rojo del icono
+    indicador.innerText = cantidadTotalPiezas;
+    indicador.style.display = 'flex';
+    indicador.style.alignItems = 'center';
+    indicador.style.justifyContent = 'center';
+    indicador.style.fontSize = '9px';
+    indicador.style.color = 'white';
+}
+
+// Función para agregar una joya al carrito
 function agregarAlCarrito(idJoya, cantidad = 1) {
     const itemExistente = carrito.find(item => item.joya_id === idJoya);
     
@@ -109,10 +176,23 @@ function agregarAlCarrito(idJoya, cantidad = 1) {
     }
     
     localStorage.setItem('carritoAura', JSON.stringify(carrito));
-    alert(`¡Pieza agregada a tu reserva VIP! Tienes ${carrito.length} tipo(s) de pieza(s) en tu selección.`);
+    
+    // Actualizamos la vista
+    actualizarUI();
+    
+    // Abrimos el menú lateral automáticamente para mostrarle al usuario que se agregó
+    const cartOffcanvas = new bootstrap.Offcanvas(document.getElementById('cartDrawer'));
+    cartOffcanvas.show();
 }
 
-// Función para procesar TODO el carrito (Llamada desde el botón final de checkout)
+// Función para eliminar un item específico del carrito
+function eliminarDelCarrito(index) {
+    carrito.splice(index, 1); // Quitamos el elemento del array
+    localStorage.setItem('carritoAura', JSON.stringify(carrito)); // Guardamos en memoria
+    actualizarUI(); // Refrescamos la vista
+}
+
+// Función para procesar TODO el carrito con el backend
 async function procesarCheckoutCarrito() {
     if (carrito.length === 0) {
         alert("Tu selección está vacía. Explora nuestro Atelier primero para añadir piezas.");
@@ -124,7 +204,7 @@ async function procesarCheckoutCarrito() {
 
     const boton = document.querySelector('.btn-checkout');
     if (boton) {
-        boton.innerText = "Asegurando colección en bóveda...";
+        boton.innerText = "Asegurando colección...";
         boton.disabled = true;
     }
 
@@ -143,17 +223,18 @@ async function procesarCheckoutCarrito() {
         const datos = await respuesta.json();
 
         if (respuesta.status === 200) {
-            alert("¡Éxito! Colección reservada.\n\nAbriendo pasarela segura...");
-            localStorage.removeItem('carritoAura'); // Vaciamos el carrito local
+            // Ya no usamos alert, redirigimos directo a la pasarela (o simulador)
+            localStorage.removeItem('carritoAura'); 
             carrito = []; 
+            actualizarUI(); 
             window.location.href = datos.url_pasarela; 
         } else {
             alert("Aviso de Bóveda: " + (datos.mensaje || "Transacción rechazada"));
-            if (boton) { boton.innerText = "Completar Inversión"; boton.disabled = false; }
+            if (boton) { boton.innerText = "Completar la Inversión"; boton.disabled = false; }
         }
     } catch (error) {
         console.error("El backend no responde:", error);
         alert("No se pudo contactar con el taller central. Verifica que tu conexión sea estable.");
-        if (boton) { boton.innerText = "Completar Inversión"; boton.disabled = false; }
+        if (boton) { boton.innerText = "Completar la Inversión"; boton.disabled = false; }
     }
 }
