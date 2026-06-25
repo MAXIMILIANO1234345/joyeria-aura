@@ -439,7 +439,7 @@ def descargar_certificado(orden_uuid):
         nombre_joya = res_joya.data[0]['nombre'] if res_joya.data else "Joya AURA"
         precio_formateado = f"{(orden['monto_total_centavos'] / 100.0):,.2f}"
 
-        # 3. Construir el PDF (Sin acentos para evitar errores de codificación en la fuente base)
+        # 3. Construir el PDF
         pdf = FPDF(orientation='P', unit='mm', format='A4')
         pdf.add_page()
         
@@ -477,8 +477,8 @@ def descargar_certificado(orden_uuid):
         pdf.set_text_color(150, 150, 150)
         pdf.multi_cell(0, 5, 'Esta pieza ha sido forjada en nuestro Atelier siguiendo los mas estrictos controles de calidad, garantizando la pureza de sus materiales y el origen etico de sus gemas.', align='C')
 
-        # Convertir a bytes de forma segura para enviarlo directo al navegador
-        pdf_bytes = pdf.output(dest='S').encode('latin1')
+        # CORRECCIÓN AQUÍ: Obtener el bytearray de fpdf2 directamente
+        pdf_bytes = bytes(pdf.output())
         
         return send_file(
             io.BytesIO(pdf_bytes),
@@ -490,6 +490,3 @@ def descargar_certificado(orden_uuid):
     except Exception as e:
         print(f"❌ [ERROR PDF]: {traceback.format_exc()}")
         return jsonify({"mensaje": "Error al generar certificado"}), 500
-
-if __name__ == '__main__':
-    app.run(port=5000)
