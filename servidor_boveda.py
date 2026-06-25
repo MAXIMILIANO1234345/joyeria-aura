@@ -8,6 +8,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from supabase import create_client
 from dotenv import load_dotenv
+import uuid
+from datetime import datetime
 
 load_dotenv()
 
