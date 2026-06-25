@@ -194,12 +194,10 @@ async function procesarCheckoutCarrito() {
         return;
     }
 
-    // VERIFICAMOS SI HAY SESIÓN ACTIVA EN LOCALSTORAGE
     const usuarioActivo = localStorage.getItem('auraVIP_User');
     if (!usuarioActivo) {
         alert("Atención: Por protocolos de seguridad de nuestra bóveda, es obligatorio iniciar sesión o crear una cuenta antes de procesar una inversión.");
         
-        // Cerramos el carrito y abrimos el modal de login
         const cartElement = document.getElementById('cartDrawer');
         const cartOffcanvas = bootstrap.Offcanvas.getInstance(cartElement);
         if (cartOffcanvas) cartOffcanvas.hide();
@@ -216,7 +214,7 @@ async function procesarCheckoutCarrito() {
     }
 
     const cargaUtil = {
-        email: usuarioActivo, // Enviamos el correo de la sesión verificada
+        email: usuarioActivo, 
         items: carrito
     };
 
@@ -363,7 +361,6 @@ async function verificarCodigoAcceso() {
         const data = await res.json();
 
         if (res.status === 200) {
-            // Guardamos la sesión exitosa
             localStorage.setItem('auraVIP_User', data.email); 
             
             const modalInstance = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
@@ -373,6 +370,9 @@ async function verificarCodigoAcceso() {
             
             alert(`¡Autenticación exitosa!\nBienvenido a la bóveda, ${data.usuario || data.email}.`);
             reiniciarModalLogin();
+            
+            // Opcional: abrir automáticamente el perfil después de iniciar sesión
+            gestionarAccesoPerfil();
         } else {
             alert("Error: " + data.mensaje);
         }
@@ -387,9 +387,8 @@ async function verificarCodigoAcceso() {
 function reiniciarModalLogin() {
     document.getElementById('auth-toggle-btns').style.display = 'flex';
     document.getElementById('auth-paso-2').style.display = 'none';
-    mostrarSeccion('login'); // Vuelve a mostrar el inicio de sesión por defecto
+    mostrarSeccion('login'); 
     
-    // Limpiar todos los campos
     document.getElementById('auth-codigo-input').value = "";
     document.getElementById('login-email').value = "";
     document.getElementById('login-password').value = "";
@@ -399,4 +398,97 @@ function reiniciarModalLogin() {
     document.getElementById('reg-password').value = "";
     
     correoTemporal = "";
+}
+
+
+/* =========================================================
+   6. MI BÓVEDA (Gestión del Panel de Perfil)
+   ========================================================= */
+
+// Función "Portero": decide si abre el modal de Login o el panel de Perfil
+function gestionarAccesoPerfil() {
+    const usuarioActivo = localStorage.getItem('auraVIP_User');
+    
+    if (!usuarioActivo) {
+        // No hay sesión: Abrir Modal de Iniciar Sesión
+        const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+        loginModal.show();
+    } else {
+        // Sí hay sesión: Abrir el Offcanvas de "Mi Bóveda"
+        const profileOffcanvas = new bootstrap.Offcanvas(document.getElementById('profileDrawer'));
+        profileOffcanvas.show();
+        
+        // Llamamos al backend para cargar los datos en vivo
+        cargarDatosPerfil(usuarioActivo);
+    }
+}
+
+// Función que pide a Python el nombre, teléfono e historial de compras del usuario
+async function cargarDatosPerfil(emailUsuario) {
+    // Ponemos estado de carga visualmente
+    document.getElementById('perfil-email').innerText = emailUsuario;
+    document.getElementById('perfil-nombre').innerText = "Cargando datos...";
+    document.getElementById('perfil-telefono').innerText = "Cargando datos...";
+    document.getElementById('perfil-pedidos-container').innerHTML = '<p class="text-muted" style="font-size: 0.9rem; font-style: italic;">Conectando con la bóveda central...</p>';
+
+    try {
+        // ATENCIÓN: Esta es la ruta que crearemos en Python en el siguiente paso
+        const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/perfil-usuario', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: emailUsuario })
+        });
+
+        if (respuesta.status === 200) {
+            const datos = await respuesta.json();
+            
+            // Llenar datos personales
+            document.getElementById('perfil-nombre').innerText = datos.usuario || "Coleccionista VIP";
+            document.getElementById('perfil-telefono').innerText = datos.telefono || "Teléfono no registrado";
+            
+            // Llenar el historial de compras
+            const contenedorPedidos = document.getElementById('perfil-pedidos-container');
+            
+            if (datos.pedidos && datos.pedidos.length > 0) {
+                let htmlPedidos = '';
+                datos.pedidos.forEach(pedido => {
+                    // Diseño elegante para cada pedido
+                    htmlPedidos += `
+                        <div class="mb-3 p-3" style="background-color: #fcfcfc; border-radius: 8px; border-left: 3px solid var(--oro-rosa-cenizo); box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
+                            <p class="mb-1 fw-bold font-serif" style="font-size: 1rem;">${pedido.nombre_joya}</p>
+                            <p class="mb-1 text-muted" style="font-size: 0.8rem;">Folio: ${pedido.id_orden.substring(0,8)}...</p>
+                            <p class="mb-1 text-muted" style="font-size: 0.8rem;">Fecha: ${new Date(pedido.fecha).toLocaleDateString()}</p>
+                            <span class="badge ${pedido.estado === 'PAGADO' ? 'bg-success' : 'bg-warning text-dark'}" style="font-size: 0.7rem; letter-spacing: 1px;">
+                                ${pedido.estado === 'PAGADO' ? 'ASEGURADO' : 'PENDIENTE DE PAGO'}
+                            </span>
+                        </div>
+                    `;
+                });
+                contenedorPedidos.innerHTML = htmlPedidos;
+            } else {
+                contenedorPedidos.innerHTML = '<p class="text-muted" style="font-size: 0.9rem; font-style: italic;">Aún no tienes piezas en tu bóveda.</p>';
+            }
+        } else {
+            document.getElementById('perfil-nombre').innerText = "Error de conexión";
+            document.getElementById('perfil-pedidos-container').innerHTML = '<p class="text-danger" style="font-size: 0.9rem;">No pudimos sincronizar tu perfil.</p>';
+        }
+    } catch (error) {
+        console.error("Error al cargar perfil:", error);
+        document.getElementById('perfil-nombre').innerText = "Modo Sin Conexión";
+        document.getElementById('perfil-pedidos-container').innerHTML = '<p class="text-muted" style="font-size: 0.9rem;">Revisa tu conexión a internet.</p>';
+    }
+}
+
+// Función para cerrar la sesión y borrar la memoria
+function cerrarSesionVIP() {
+    if(confirm("¿Estás seguro de que deseas cerrar tu bóveda?")) {
+        localStorage.removeItem('auraVIP_User');
+        
+        // Cerrar el panel
+        const profileElement = document.getElementById('profileDrawer');
+        const profileOffcanvas = bootstrap.Offcanvas.getInstance(profileElement);
+        if(profileOffcanvas) profileOffcanvas.hide();
+        
+        alert("Sesión cerrada correctamente. Hasta pronto.");
+    }
 }
