@@ -1,16 +1,23 @@
+# ==========================================
+# @author: Maximiliano Cabello
+# Proyecto: AURA Alta Joyería - Servidor Central
+# ==========================================
+
 import os
 import smtplib
 import traceback
 import requests
 import random
+import io
 from datetime import datetime, timedelta, timezone
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from supabase import create_client
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
+from fpdf import FPDF
 
 # Cargar variables de entorno
 load_dotenv()
@@ -26,23 +33,40 @@ boveda = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SECRET_KEY
 # MOTORES DE CORREO (SMTP)
 # ==========================================
 
-def enviar_certificado_html(destinatario, nombre_pieza, uuid_orden, precio_mxn):
+def enviar_ticket_compra_html(destinatario, nombre_pieza, uuid_orden, precio_mxn):
     remitente = os.getenv("EMAIL_TALLER")
     password = os.getenv("EMAIL_PASSWORD")
     
     msg = MIMEMultipart()
     msg['From'] = f"AURA Alta Joyería <{remitente}>"
     msg['To'] = destinatario
-    msg['Subject'] = f"💎 Certificado de Propiedad: {nombre_pieza}"
+    msg['Subject'] = f"Recibo de Inversión - Orden {uuid_orden[:8]}"
     
     html = f"""
+    <!DOCTYPE html>
     <html>
-        <body>
-            <h1>Certificado AURA</h1>
-            <p>Gracias por tu adquisición de: <strong>{nombre_pieza}</strong></p>
-            <p>Inversión: <strong>${precio_mxn} MXN</strong></p>
-            <p>Folio de Bóveda: <code>{uuid_orden}</code></p>
-        </body>
+    <head>
+        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Jost:wght@300;400&display=swap" rel="stylesheet">
+    </head>
+    <body style="font-family: 'Jost', sans-serif; background-color: #fafafa; padding: 30px 15px; margin: 0;">
+        <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; padding: 40px; border: 1px solid #eeeeee;">
+            <h1 style="font-family: 'Cormorant Garamond', serif; font-size: 24px; color: #111; letter-spacing: 4px; text-align: center; margin-bottom: 5px;">AURA</h1>
+            <p style="text-align: center; font-size: 10px; letter-spacing: 2px; color: #999; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 15px;">Recibo de Transaccion</p>
+            
+            <p style="font-size: 14px; color: #444; margin-top: 30px;">Estimado cliente,</p>
+            <p style="font-size: 14px; color: #444; line-height: 1.5;">Hemos asegurado exitosamente su inversion en nuestra boveda central. A continuacion, los detalles de su transaccion:</p>
+            
+            <div style="background-color: #f9f9f9; padding: 20px; margin: 25px 0; border-radius: 4px;">
+                <p style="margin: 0 0 10px 0; font-size: 13px; color: #333;"><strong>Pieza:</strong> {nombre_pieza}</p>
+                <p style="margin: 0 0 10px 0; font-size: 13px; color: #333;"><strong>Folio de Orden:</strong> {uuid_orden}</p>
+                <p style="margin: 0 0 10px 0; font-size: 13px; color: #333;"><strong>Fecha:</strong> {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
+                <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
+                <p style="margin: 0; font-size: 15px; color: #111; text-align: right;"><strong>Total: ${precio_mxn} MXN</strong></p>
+            </div>
+            
+            <p style="font-size: 12px; color: #777; text-align: center; margin-top: 40px;">En breve recibira un segundo correo con el Certificado de Autenticidad de su pieza.</p>
+        </div>
+    </body>
     </html>
     """
     msg.attach(MIMEText(html, 'html'))
@@ -54,7 +78,56 @@ def enviar_certificado_html(destinatario, nombre_pieza, uuid_orden, precio_mxn):
         server.quit()
         return True
     except Exception as e:
-        print(f"❌ [SMTP ERROR CRÍTICO]: {str(e)}")
+        print(f"❌ [SMTP ERROR - TICKET]: {str(e)}")
+        return False
+
+def enviar_certificado_html(destinatario, nombre_pieza, uuid_orden):
+    remitente = os.getenv("EMAIL_TALLER")
+    password = os.getenv("EMAIL_PASSWORD")
+    
+    msg = MIMEMultipart()
+    msg['From'] = f"AURA Alta Joyería <{remitente}>"
+    msg['To'] = destinatario
+    msg['Subject'] = f"💎 Certificado de Autenticidad: {nombre_pieza}"
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Jost:wght@300;400&display=swap" rel="stylesheet">
+    </head>
+    <body style="font-family: 'Jost', sans-serif; background-color: #f4f4f4; padding: 40px 20px; text-align: center; margin: 0;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 50px 40px; border: 1px solid #eaeaea; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+            
+            <h1 style="font-family: 'Cormorant Garamond', serif; font-size: 36px; color: #222; letter-spacing: 6px; margin-bottom: 5px;">AURA</h1>
+            <p style="font-size: 11px; letter-spacing: 3px; color: #888; text-transform: uppercase; border-bottom: 1px solid #b76e79; padding-bottom: 20px; margin-top: 0;">
+                Alta Joyeria • Certificado de Propiedad
+            </p>
+            
+            <p style="margin-top: 40px; font-size: 15px; color: #555; font-weight: 300;">Extendemos el presente documento para certificar la autenticidad y propiedad de la pieza:</p>
+            <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 28px; color: #b76e79; margin: 25px 0; font-style: italic;">{nombre_pieza}</h2>
+            <p style="font-size: 14px; color: #555; font-weight: 300; line-height: 1.6;">Forjada con los mas altos estandares eticos y de calidad, garantizando la pureza de sus materiales. Esta pieza pertenece oficialmente a la coleccion privada de su portador.</p>
+            
+            <div style="margin-top: 40px; padding: 25px; background-color: #fcfcfc; border-left: 3px solid #b76e79; text-align: left;">
+                <p style="margin: 5px 0; font-size: 13px; color: #333;"><strong>FOLIO DE REGISTRO EN BOVEDA:</strong> <br><span style="font-family: monospace; color: #777; font-size: 12px;">{uuid_orden}</span></p>
+                <p style="margin: 15px 0 5px 0; font-size: 13px; color: #333;"><strong>FECHA DE EMISION:</strong> <br><span style="color: #555;">{datetime.now().strftime('%d/%m/%Y')}</span></p>
+            </div>
+            
+            <p style="margin-top: 50px; font-size: 11px; color: #aaa; font-style: italic;">Este documento digital esta respaldado por los registros centrales del Atelier AURA.</p>
+        </div>
+    </body>
+    </html>
+    """
+    msg.attach(MIMEText(html, 'html'))
+    
+    try:
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login(remitente, password)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"❌ [SMTP ERROR - CERTIFICADO]: {str(e)}")
         return False
 
 def enviar_codigo_email(destinatario, codigo):
@@ -69,10 +142,10 @@ def enviar_codigo_email(destinatario, codigo):
     html = f"""
     <html>
         <body style="font-family: sans-serif; text-align: center; color: #333;">
-            <h2>Autenticación de Bóveda AURA</h2>
-            <p>Tu token de acceso de 6 dígitos es:</p>
+            <h2>Autenticacion de Boveda AURA</h2>
+            <p>Tu token de acceso de 6 digitos es:</p>
             <h1 style="letter-spacing: 5px; color: #5a2e3f;">{codigo}</h1>
-            <p style="font-size: 0.8rem; color: #777;">Este token expirará en 15 minutos. Si no solicitaste este acceso, por favor ignora este mensaje.</p>
+            <p style="font-size: 0.8rem; color: #777;">Este token expirara en 15 minutos. Si no solicitaste este acceso, por favor ignora este mensaje.</p>
         </body>
     </html>
     """
@@ -87,7 +160,6 @@ def enviar_codigo_email(destinatario, codigo):
     except Exception as e:
         print(f"❌ [SMTP ERROR - TOKEN]: {str(e)}")
         return False
-
 
 # ==========================================
 # RUTAS DE AUTENTICACIÓN VIP Y PERFIL
@@ -110,7 +182,7 @@ def crear_cuenta():
             
         res_existente = boveda.table('usuarios_vip').select('id').eq('email', email).execute()
         if res_existente.data:
-            return jsonify({"mensaje": "Este correo ya está registrado. Por favor, inicia sesión."}), 409
+            return jsonify({"mensaje": "Este correo ya esta registrado. Por favor, inicia sesion."}), 409
             
         codigo = str(random.randint(100000, 999999))
         expiracion = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
@@ -133,7 +205,6 @@ def crear_cuenta():
         print(f"❌ [ERROR CREAR CUENTA]: {traceback.format_exc()}")
         return jsonify({"mensaje": "Error interno del servidor"}), 500
 
-
 @app.route('/api/iniciar-sesion', methods=['POST', 'OPTIONS'])
 def iniciar_sesion():
     if request.method == 'OPTIONS':
@@ -146,12 +217,12 @@ def iniciar_sesion():
         res_usuario = boveda.table('usuarios_vip').select('*').eq('email', email).execute()
         
         if not res_usuario.data:
-            return jsonify({"mensaje": "El correo no está registrado en nuestra bóveda."}), 404
+            return jsonify({"mensaje": "El correo no esta registrado en nuestra boveda."}), 404
             
         usuario = res_usuario.data[0]
         
         if not check_password_hash(usuario['password_hash'], password):
-            return jsonify({"mensaje": "Contraseña incorrecta."}), 401
+            return jsonify({"mensaje": "Contrasena incorrecta."}), 401
             
         codigo = str(random.randint(100000, 999999))
         expiracion = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
@@ -162,12 +233,11 @@ def iniciar_sesion():
         }).eq('email', email).execute()
         
         exito = enviar_codigo_email(email, codigo)
-        return jsonify({"mensaje": "Credenciales correctas. Código 2FA enviado."}), 200
+        return jsonify({"mensaje": "Credenciales correctas. Codigo 2FA enviado."}), 200
         
     except Exception as e:
         print(f"❌ [ERROR INICIAR SESIÓN]: {traceback.format_exc()}")
         return jsonify({"mensaje": "Error interno del servidor"}), 500
-
 
 @app.route('/api/verificar-codigo', methods=['POST', 'OPTIONS'])
 def verificar_codigo():
@@ -207,8 +277,6 @@ def verificar_codigo():
         print(f"❌ [ERROR VERIFICAR CÓDIGO]: {traceback.format_exc()}")
         return jsonify({"mensaje": "Error interno del servidor"}), 500
 
-
-# --- NUEVA RUTA: PERFIL DEL USUARIO (INTEGRACIÓN 3NF) ---
 @app.route('/api/perfil-usuario', methods=['POST', 'OPTIONS'])
 def perfil_usuario():
     if request.method == 'OPTIONS':
@@ -217,7 +285,6 @@ def perfil_usuario():
     try:
         email = request.json.get('email', '').strip().lower()
         
-        # 1. Obtener los datos del usuario (Nombre, Teléfono y su UUID)
         res_user = boveda.table('usuarios_vip').select('id, usuario, telefono').eq('email', email).execute()
         
         if not res_user.data:
@@ -226,13 +293,11 @@ def perfil_usuario():
         user_data = res_user.data[0]
         usuario_id = user_data['id']
         
-        # 2. Buscar todas las órdenes de este usuario gracias al nuevo "cable" relacional (usuario_id)
         res_pedidos = boveda.table('ordenes_compra').select('id, estado, fecha_creacion, joya_id').eq('usuario_id', usuario_id).order('fecha_creacion', desc=True).execute()
         
         historial = []
         if res_pedidos.data:
             for pedido in res_pedidos.data:
-                # 3. Buscar el nombre de la joya para cada pedido
                 res_joya = boveda.table('joyas_stock').select('nombre').eq('id', pedido['joya_id']).execute()
                 nombre_pieza = res_joya.data[0]['nombre'] if res_joya.data else "Joya AURA"
                 
@@ -253,7 +318,6 @@ def perfil_usuario():
         print(f"❌ [ERROR PERFIL]: {traceback.format_exc()}")
         return jsonify({"mensaje": "Error interno del servidor"}), 500
 
-
 # ==========================================
 # RUTAS DE RESERVA Y PASARELA DE PAGO
 # ==========================================
@@ -269,10 +333,8 @@ def reservar_carrito():
         items = data.get('items', [])
 
         if not items:
-            return jsonify({"mensaje": "El carrito está vacío"}), 400
+            return jsonify({"mensaje": "El carrito esta vacio"}), 400
 
-        # --- NUEVA INTEGRACIÓN ---
-        # Buscamos el ID único del usuario para formalizar la relación en la base de datos
         res_user = boveda.table('usuarios_vip').select('id').eq('email', email).execute()
         usuario_uuid = res_user.data[0]['id'] if res_user.data else None
 
@@ -294,10 +356,9 @@ def reservar_carrito():
 
         primer_joya_id = int(items[0]['joya_id'])
 
-        # --- AHORA GUARDAMOS TANTO EL EMAIL COMO EL usuario_id ---
         res_orden = boveda.table('ordenes_compra').insert({
             'usuario_email': email,
-            'usuario_id': usuario_uuid,  # El nuevo "cable" hacia la tabla VIP
+            'usuario_id': usuario_uuid,
             'joya_id': primer_joya_id, 
             'cantidad': cantidad_total,
             'monto_total_centavos': monto_total_centavos,
@@ -333,7 +394,6 @@ def reservar_carrito():
         print(f"❌ [RESERVAR CARRITO ERROR]: {traceback.format_exc()}")
         return jsonify({"mensaje": "Error en reserva del carrito"}), 500
 
-
 @app.route('/api/confirmar-compra', methods=['POST'])
 def confirmar_compra():
     uuid_orden = request.json.get('orden_uuid')
@@ -348,14 +408,88 @@ def confirmar_compra():
         nombre_joya = res_joya.data[0]['nombre']
         precio_formateado = f"{(res_joya.data[0]['precio_centavos'] / 100.0):,.2f}"
         
-        exito = enviar_certificado_html(email_cliente, nombre_joya, uuid_orden, precio_formateado)
+        # Disparamos ambos correos de forma independiente
+        exito_ticket = enviar_ticket_compra_html(email_cliente, nombre_joya, uuid_orden, precio_formateado)
+        exito_cert = enviar_certificado_html(email_cliente, nombre_joya, uuid_orden)
         
-        return jsonify({"estatus": "CONFIRMADO", "correo_enviado": exito}), 200
+        exito_total = exito_ticket and exito_cert
+        
+        return jsonify({"estatus": "CONFIRMADO", "correo_enviado": exito_total}), 200
         
     except Exception:
         print(f"❌ [CONFIRMAR ERROR]: {traceback.format_exc()}")
         return jsonify({"mensaje": "Error interno"}), 500
 
+# ==========================================
+# NUEVO: GENERADOR DE CERTIFICADOS PDF
+# ==========================================
+
+@app.route('/api/descargar-certificado/<orden_uuid>', methods=['GET'])
+def descargar_certificado(orden_uuid):
+    try:
+        # 1. Buscar los detalles de la orden
+        res = boveda.table('ordenes_compra').select('joya_id, fecha_creacion, monto_total_centavos').eq('id', orden_uuid).execute()
+        if not res.data:
+            return jsonify({"mensaje": "Orden no encontrada"}), 404
+            
+        orden = res.data[0]
+        
+        # 2. Buscar el nombre de la joya
+        res_joya = boveda.table('joyas_stock').select('nombre').eq('id', orden['joya_id']).execute()
+        nombre_joya = res_joya.data[0]['nombre'] if res_joya.data else "Joya AURA"
+        precio_formateado = f"{(orden['monto_total_centavos'] / 100.0):,.2f}"
+
+        # 3. Construir el PDF (Sin acentos para evitar errores de codificación en la fuente base)
+        pdf = FPDF(orientation='P', unit='mm', format='A4')
+        pdf.add_page()
+        
+        # Cabecera
+        pdf.set_font('helvetica', 'B', 24)
+        pdf.cell(0, 20, 'AURA', ln=True, align='C')
+        
+        pdf.set_font('helvetica', 'I', 10)
+        pdf.set_text_color(150, 150, 150)
+        pdf.cell(0, 10, 'CERTIFICADO DE AUTENTICIDAD Y PROPIEDAD', ln=True, align='C')
+        pdf.line(20, 45, 190, 45) # Linea divisoria
+        
+        # Cuerpo
+        pdf.ln(20)
+        pdf.set_font('helvetica', '', 12)
+        pdf.set_text_color(50, 50, 50)
+        pdf.cell(0, 10, 'Se certifica la adquisicion de la pieza:', ln=True, align='C')
+        
+        pdf.ln(10)
+        pdf.set_font('helvetica', 'B', 20)
+        pdf.set_text_color(183, 110, 121) # Oro rosa cenizo
+        pdf.cell(0, 10, nombre_joya, ln=True, align='C')
+        
+        # Detalles
+        pdf.ln(20)
+        pdf.set_font('helvetica', '', 10)
+        pdf.set_text_color(50, 50, 50)
+        pdf.cell(0, 8, f"Folio de Boveda: {orden_uuid}", ln=True, align='L')
+        pdf.cell(0, 8, f"Fecha de Adquisicion: {orden['fecha_creacion'][:10]}", ln=True, align='L')
+        pdf.cell(0, 8, f"Inversion: ${precio_formateado} MXN", ln=True, align='L')
+        
+        # Pie
+        pdf.ln(30)
+        pdf.set_font('helvetica', 'I', 9)
+        pdf.set_text_color(150, 150, 150)
+        pdf.multi_cell(0, 5, 'Esta pieza ha sido forjada en nuestro Atelier siguiendo los mas estrictos controles de calidad, garantizando la pureza de sus materiales y el origen etico de sus gemas.', align='C')
+
+        # Convertir a bytes de forma segura para enviarlo directo al navegador
+        pdf_bytes = pdf.output(dest='S').encode('latin1')
+        
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'Certificado_AURA_{orden_uuid[:8]}.pdf'
+        )
+
+    except Exception as e:
+        print(f"❌ [ERROR PDF]: {traceback.format_exc()}")
+        return jsonify({"mensaje": "Error al generar certificado"}), 500
 
 if __name__ == '__main__':
     app.run(port=5000)
