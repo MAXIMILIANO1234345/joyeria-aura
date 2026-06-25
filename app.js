@@ -63,8 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Alerta elegante de pago aprobado
         mostrarAlertaVIP(
-            "Pago Aprobado", 
-            "Tu inversión ha sido capturada por la Bóveda Central. Estamos forjando tu Certificado VIP de Propiedad y despachándolo al correo...",
+            "Inversión Asegurada", 
+            "Tu adquisición ha sido capturada por la Bóveda Central. Estamos generando tu Recibo de Transacción y tu Certificado de Autenticidad...",
             "bi-shield-check"
         );
 
@@ -77,17 +77,18 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             if (data.estatus === 'CONFIRMADO' && data.correo_enviado) {
                 setTimeout(() => {
-                    mostrarToastVIP(`✉️ Certificado despachado a la bandeja de: ${data.email}`);
-                }, 3000); // Pequeño retraso para que el usuario alcance a leer el modal principal
+                    // Notificación actualizada para dos correos
+                    mostrarToastVIP(`✉️ Recibo y Certificado digital despachados a tu correo electrónico.`);
+                }, 3000); 
             } else if (data.estatus === 'YA_PROCESADO') {
                 mostrarToastVIP("Aviso: " + data.mensaje);
             } else {
-                mostrarToastVIP("⚠️ El pago está asegurado, pero hubo una demora al entregar el correo.");
+                mostrarToastVIP("⚠️ El pago está asegurado, pero hubo una demora al entregar los documentos digitales.");
             }
         })
         .catch(err => {
             console.error("Error al certificar:", err);
-            mostrarToastVIP("Tu pago fue procesado, pero no pudimos emitir el recibo digital.");
+            mostrarToastVIP("Tu pago fue procesado, pero no pudimos emitir los recibos digitales.");
         });
 
     } else if (estatusTransaccion === 'cancelada') {
@@ -427,7 +428,7 @@ function reiniciarModalLogin() {
 
 
 /* =========================================================
-   7. MI BÓVEDA (Gestión del Panel de Perfil)
+   7. MI BÓVEDA (Gestión del Panel de Perfil y Descarga de PDF)
    ========================================================= */
 
 function gestionarAccesoPerfil() {
@@ -466,6 +467,21 @@ async function cargarDatosPerfil(emailUsuario) {
             if (datos.pedidos && datos.pedidos.length > 0) {
                 let htmlPedidos = '';
                 datos.pedidos.forEach(pedido => {
+                    
+                    // Integración de Botón de Descarga de Certificado en PDF
+                    let botonDescarga = '';
+                    if (pedido.estado === 'PAGADO') {
+                        botonDescarga = `
+                        <div class="mt-2 text-end">
+                            <a href="https://joyeria-aura-42ax.onrender.com/api/descargar-certificado/${pedido.id_orden}" 
+                               target="_blank"
+                               class="btn btn-sm" 
+                               style="font-size: 0.75rem; letter-spacing: 1px; color: var(--oro-rosa-cenizo); border: 1px solid var(--oro-rosa-cenizo); border-radius: 4px; text-decoration: none; padding: 4px 10px; transition: all 0.3s ease;">
+                               <i class="bi bi-file-earmark-pdf me-1"></i> Obtener Certificado
+                            </a>
+                        </div>`;
+                    }
+
                     htmlPedidos += `
                         <div class="mb-3 p-3" style="background-color: #fcfcfc; border-radius: 8px; border-left: 3px solid var(--oro-rosa-cenizo); box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
                             <p class="mb-1 fw-bold font-serif" style="font-size: 1rem;">${pedido.nombre_joya}</p>
@@ -474,6 +490,7 @@ async function cargarDatosPerfil(emailUsuario) {
                             <span class="badge ${pedido.estado === 'PAGADO' ? 'bg-success' : 'bg-warning text-dark'}" style="font-size: 0.7rem; letter-spacing: 1px;">
                                 ${pedido.estado === 'PAGADO' ? 'ASEGURADO' : 'PENDIENTE DE PAGO'}
                             </span>
+                            ${botonDescarga}
                         </div>
                     `;
                 });
