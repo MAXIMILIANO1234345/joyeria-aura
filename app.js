@@ -131,9 +131,42 @@ function mostrarToastVIP(mensaje) {
    ========================================================= */
 
 const catalogoJoyas = {
-    1: { nombre: "Solitario Eternidad", precio: 24500, imagen: "https://images.unsplash.com/photo-1605100804763-247f67b2548e?q=80&w=200&auto=format&fit=crop" },
-    2: { nombre: "Crossover Lumina", precio: 16800, imagen: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=200&auto=format&fit=crop" },
-    3: { nombre: "Esencia Pura", precio: 3200, imagen: "https://images.unsplash.com/photo-1599643478524-fb66f7ca265b?q=80&w=200&auto=format&fit=crop" }
+    1: { 
+        nombre: "Solitario Eternidad", 
+        precio: 24500, 
+        imagen: "https://images.unsplash.com/photo-1605100804763-247f67b2548e?q=80&w=200&auto=format&fit=crop",
+        modelo: "anillo_mariposa.glb",
+        escala: "2.5 2.5 2.5",
+        rotacion: "15 -20 10",
+        pureza: "Platino 950 / Diamante VVS1",
+        metodo: "Forjado y Engastado a mano",
+        talla: "Hecho a la medida",
+        historia: "Una pieza que trasciende el tiempo. El Solitario Eternidad no es solo un anillo, es una declaración de intenciones. Su diamante central, meticulosamente seleccionado por nuestros gemólogos por su asombrosa claridad, captura cada destello de luz, reflejando una promesa inquebrantable."
+    },
+    2: { 
+        nombre: "Crossover Lumina", 
+        precio: 16800, 
+        imagen: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=200&auto=format&fit=crop",
+        modelo: "anillo.glb",
+        escala: "1.2 1.2 1.2",
+        rotacion: "15 -20 10",
+        pureza: "Oro Blanco 18K / Zafiro",
+        metodo: "Fundición a la cera perdida",
+        talla: "Hecho a la medida",
+        historia: "La convergencia perfecta entre la modernidad y el clasicismo. Sus líneas entrelazadas representan caminos que se unen. Forjado en oro blanco de 18 quilates, su estructura arquitectónica abraza sutilmente las gemas, creando un halo de luz que hipnotiza desde cualquier ángulo."
+    },
+    3: { 
+        nombre: "Esencia Pura", 
+        precio: 3200, 
+        imagen: "https://images.unsplash.com/photo-1599643478524-fb66f7ca265b?q=80&w=200&auto=format&fit=crop",
+        modelo: "metaretail_anillo_panthere.glb",
+        escala: "1 1 1",
+        rotacion: "15 -20 10",
+        pureza: "Plata .925 con Baño de Rodio",
+        metodo: "Pulido Espejo Artesanal",
+        talla: "Ajustable (5-9 US)",
+        historia: "La belleza en su expresión más minimalista. 'Esencia Pura' desafía la gravedad con un diseño continuo que fluye orgánicamente. Su acabado en rodio le otorga una resistencia extrema y un brillo platinado que la convierte en la compañera diaria perfecta para una elegancia silenciosa."
+    }
 };
 
 let carritoCrudo = JSON.parse(localStorage.getItem('carritoAura')) || [];
@@ -274,7 +307,79 @@ async function procesarCheckoutCarrito() {
 
 
 /* =========================================================
-   6. SISTEMA DE AUTENTICACIÓN (Login / Registro + 2FA)
+   6. SHOWROOM INMERSIVO VIP (Venta interactiva)
+   ========================================================= */
+
+function abrirVistaInmersiva(id) {
+    const joya = catalogoJoyas[id];
+    if(!joya) return;
+
+    // 1. Llenar los datos de venta (Storytelling)
+    document.getElementById('immersive-title').innerText = joya.nombre;
+    document.getElementById('immersive-story').innerText = joya.historia;
+    document.getElementById('immersive-purity').innerText = joya.pureza;
+    document.getElementById('immersive-method').innerText = joya.metodo;
+    document.getElementById('immersive-size').innerText = joya.talla;
+    document.getElementById('immersive-price').innerText = `$ ${joya.precio.toLocaleString()} MXN`;
+
+    // 2. Configurar el botón de comprar
+    const btnAdd = document.getElementById('btn-immersive-add');
+    btnAdd.onclick = () => {
+        agregarAlCarrito(id);
+        cerrarVistaInmersiva();
+    };
+
+    // 3. Inyectar el motor 3D limpio y con controles de mouse activados (look-controls="enabled: true")
+    const container3D = document.getElementById('immersive-3d-container');
+    container3D.innerHTML = `
+        <a-scene embedded renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true; alpha: true" vr-mode-ui="enabled: false" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;">
+            <a-assets>
+                <a-asset-item id="modelo-inmersivo-${id}" src="${joya.modelo}"></a-asset-item>
+            </a-assets>
+            <a-light type="ambient" color="#ffffff" intensity="2"></a-light>
+            <a-light type="directional" position="2 4 2" color="#fff5e6" intensity="4.5" castShadow="true"></a-light>
+            <a-light type="directional" position="-3 1 -2" color="#e6f0ff" intensity="2.5"></a-light>
+            
+            <!-- Animación de rotación constante para exhibición -->
+            <a-entity gltf-model="#modelo-inmersivo-${id}" position="0 0 0" rotation="${joya.rotacion}" scale="${joya.escala}" 
+                      animation="property: rotation; to: 0 360 0; loop: true; dur: 25000; easing: linear;"></a-entity>
+            
+            <!-- Cámara interactiva: el usuario puede arrastrar con el mouse para mirar alrededor -->
+            <a-entity class="lente-camara" camera position="0 0 5.0" look-controls="enabled: true" wasd-controls="enabled: false"></a-entity>
+        </a-scene>
+        <div style="position: absolute; bottom: 30px; color: #888; font-family: var(--font-sans); letter-spacing: 2px; font-size: 0.8rem; pointer-events: none;">
+            <i class="bi bi-arrows-move me-2"></i> ARRASTRA PARA INSPECCIONAR
+        </div>
+    `;
+
+    // 4. Mostrar la vista con animación suave
+    const overlay = document.getElementById('immersive-product-view');
+    overlay.style.display = 'block';
+    
+    // Bloquear el scroll de la página de fondo
+    document.body.style.overflow = 'hidden';
+
+    setTimeout(() => {
+        overlay.classList.add('active');
+    }, 10);
+}
+
+function cerrarVistaInmersiva() {
+    const overlay = document.getElementById('immersive-product-view');
+    overlay.classList.remove('active');
+    
+    setTimeout(() => {
+        overlay.style.display = 'none';
+        // Limpiamos el contenedor 3D para liberar WebGL y memoria RAM
+        document.getElementById('immersive-3d-container').innerHTML = ''; 
+        // Restaurar el scroll de la página
+        document.body.style.overflow = 'auto';
+    }, 500); // Esperar a que termine la transición CSS
+}
+
+
+/* =========================================================
+   7. SISTEMA DE AUTENTICACIÓN (Login / Registro + 2FA)
    ========================================================= */
 
 let correoTemporal = ""; 
@@ -428,7 +533,7 @@ function reiniciarModalLogin() {
 
 
 /* =========================================================
-   7. MI BÓVEDA (Gestión del Panel de Perfil y Descarga de PDF)
+   8. MI BÓVEDA (Gestión del Panel de Perfil y Descarga de PDF)
    ========================================================= */
 
 function gestionarAccesoPerfil() {
