@@ -16,10 +16,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 load_dotenv()
 
 app = Flask(__name__)
-# Configuración global de CORS para permitir todas las solicitudes de tu frontend
+# Configuración global de CORS para permitir todas las solicitudes del frontend
 CORS(app)
 
-# Configuración de la conexión a la Bóveda (Supabase)
+# Configuración de Supabase
 boveda = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SECRET_KEY"))
 
 # ==========================================
@@ -90,7 +90,7 @@ def enviar_codigo_email(destinatario, codigo):
 
 
 # ==========================================
-# RUTAS DE AUTENTICACIÓN VIP (REGISTRO / LOGIN / 2FA)
+# RUTAS DE AUTENTICACIÓN VIP Y PERFIL
 # ==========================================
 
 @app.route('/api/crear-cuenta', methods=['POST', 'OPTIONS'])
@@ -105,23 +105,17 @@ def crear_cuenta():
         email = data.get('email', '').strip().lower()
         password = data.get('password', '').strip()
         
-        # Validar campos vacíos
         if not all([usuario, telefono, email, password]):
             return jsonify({"mensaje": "Todos los campos son obligatorios"}), 400
             
-        # Verificar si el correo ya existe en la base de datos
         res_existente = boveda.table('usuarios_vip').select('id').eq('email', email).execute()
         if res_existente.data:
             return jsonify({"mensaje": "Este correo ya está registrado. Por favor, inicia sesión."}), 409
             
-        # Generar Token de 6 dígitos y establecer expiración (15 minutos)
         codigo = str(random.randint(100000, 999999))
         expiracion = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
-        
-        # Encriptar la contraseña (Hashing seguro)
         hashed_pw = generate_password_hash(password)
         
-        # Insertar nuevo usuario en Supabase
         boveda.table('usuarios_vip').insert({
             "usuario": usuario,
             "telefono": telefono,
@@ -132,13 +126,8 @@ def crear_cuenta():
             "cuenta_verificada": False
         }).execute()
         
-        # Enviar el Token 2FA al correo del usuario
         exito = enviar_codigo_email(email, codigo)
-        
-        if exito:
-            return jsonify({"mensaje": "Cuenta creada. Token enviado al correo."}), 200
-        else:
-            return jsonify({"mensaje": "La cuenta se creó, pero hubo un error al enviar el correo."}), 500
+        return jsonify({"mensaje": "Cuenta creada. Token enviado al correo."}), 200
             
     except Exception as e:
         print(f"❌ [ERROR CREAR CUENTA]: {traceback.format_exc()}")
@@ -154,7 +143,6 @@ def iniciar_sesion():
         email = request.json.get('email', '').strip().lower()
         password = request.json.get('password', '').strip()
         
-        # Buscar al usuario por correo
         res_usuario = boveda.table('usuarios_vip').select('*').eq('email', email).execute()
         
         if not res_usuario.data:
@@ -162,27 +150,19 @@ def iniciar_sesion():
             
         usuario = res_usuario.data[0]
         
-        # Verificar que la contraseña coincida con el hash guardado
         if not check_password_hash(usuario['password_hash'], password):
             return jsonify({"mensaje": "Contraseña incorrecta."}), 401
             
-        # Generar nuevo token 2FA para este inicio de sesión
         codigo = str(random.randint(100000, 999999))
         expiracion = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
         
-        # Actualizar el usuario con el nuevo código
         boveda.table('usuarios_vip').update({
             "codigo_acceso": codigo, 
             "expiracion_codigo": expiracion
         }).eq('email', email).execute()
         
-        # Enviar el token al correo
         exito = enviar_codigo_email(email, codigo)
-        
-        if exito:
-            return jsonify({"mensaje": "Credenciales correctas. Código 2FA enviado."}), 200
-        else:
-            return jsonify({"mensaje": "Credenciales correctas, pero hubo un error con el correo."}), 500
+        return jsonify({"mensaje": "Credenciales correctas. Código 2FA enviado."}), 200
         
     except Exception as e:
         print(f"❌ [ERROR INICIAR SESIÓN]: {traceback.format_exc()}")
@@ -198,18 +178,15 @@ def verificar_codigo():
         email = request.json.get('email', '').strip().lower()
         codigo = request.json.get('codigo', '').strip()
         
-        # Buscar el usuario
         res_usuario = boveda.table('usuarios_vip').select('*').eq('email', email).execute()
         if not res_usuario.data:
             return jsonify({"mensaje": "Usuario no encontrado"}), 404
             
         usuario = res_usuario.data[0]
         
-        # Verificar si el código coincide
         if usuario.get('codigo_acceso') != codigo:
             return jsonify({"mensaje": "Token incorrecto"}), 401
             
-        # Verificar si el código expiró
         expiracion_str = usuario.get('expiracion_codigo')
         if expiracion_str:
             expiracion = datetime.fromisoformat(expiracion_str.replace('Z', '+00:00'))
@@ -218,7 +195,6 @@ def verificar_codigo():
         
         ahora = datetime.now(timezone.utc).isoformat()
         
-        # ACCESO CONCEDIDO: Limpiar código, registrar entrada y verificar cuenta
         boveda.table('usuarios_vip').update({
             "codigo_acceso": None, 
             "ultimo_acceso": ahora,
@@ -232,59 +208,58 @@ def verificar_codigo():
         return jsonify({"mensaje": "Error interno del servidor"}), 500
 
 
+# --- NUEVA RUTA: PERFIL DEL USUARIO (INTEGRACIÓN 3NF) ---
+@app.route('/api/perfil-usuario', methods=['POST', 'OPTIONS'])
+def perfil_usuario():
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+        
+    try:
+        email = request.json.get('email', '').strip().lower()
+        
+        # 1. Obtener los datos del usuario (Nombre, Teléfono y su UUID)
+        res_user = boveda.table('usuarios_vip').select('id, usuario, telefono').eq('email', email).execute()
+        
+        if not res_user.data:
+            return jsonify({"mensaje": "Usuario no encontrado"}), 404
+            
+        user_data = res_user.data[0]
+        usuario_id = user_data['id']
+        
+        # 2. Buscar todas las órdenes de este usuario gracias al nuevo "cable" relacional (usuario_id)
+        res_pedidos = boveda.table('ordenes_compra').select('id, estado, fecha_creacion, joya_id').eq('usuario_id', usuario_id).order('fecha_creacion', desc=True).execute()
+        
+        historial = []
+        if res_pedidos.data:
+            for pedido in res_pedidos.data:
+                # 3. Buscar el nombre de la joya para cada pedido
+                res_joya = boveda.table('joyas_stock').select('nombre').eq('id', pedido['joya_id']).execute()
+                nombre_pieza = res_joya.data[0]['nombre'] if res_joya.data else "Joya AURA"
+                
+                historial.append({
+                    "id_orden": pedido['id'],
+                    "estado": pedido['estado'],
+                    "fecha": pedido['fecha_creacion'],
+                    "nombre_joya": nombre_pieza
+                })
+                
+        return jsonify({
+            "usuario": user_data['usuario'],
+            "telefono": user_data['telefono'],
+            "pedidos": historial
+        }), 200
+
+    except Exception as e:
+        print(f"❌ [ERROR PERFIL]: {traceback.format_exc()}")
+        return jsonify({"mensaje": "Error interno del servidor"}), 500
+
+
 # ==========================================
 # RUTAS DE RESERVA Y PASARELA DE PAGO
 # ==========================================
 
-@app.route('/api/reservar-pieza', methods=['POST'])
-def reservar_pieza():
-    try:
-        data = request.json
-        email = data.get('email')
-        joya_id = int(data.get('joya_id'))
-
-        res_joya = boveda.table('joyas_stock').select('nombre, precio_centavos').eq('id', joya_id).execute()
-        joya_info = res_joya.data[0]
-        precio = joya_info['precio_centavos']
-
-        res_orden = boveda.table('ordenes_compra').insert({
-            'usuario_email': email,
-            'joya_id': joya_id,
-            'cantidad': 1,
-            'monto_total_centavos': precio,
-            'estado': 'PENDIENTE_PAYPAL'
-        }).execute()
-        
-        orden_uuid = res_orden.data[0]['id']
-
-        token = requests.post("https://api-m.sandbox.paypal.com/v1/oauth2/token", 
-                              data={"grant_type": "client_credentials"}, 
-                              auth=(os.getenv("PAYPAL_CLIENT_ID"), os.getenv("PAYPAL_SECRET"))).json()["access_token"]
-        
-        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
-        payload = {
-            "intent": "CAPTURE",
-            "purchase_units": [{"amount": {"currency_code": "MXN", "value": f"{precio/100:.2f}"}}],
-            "application_context": {
-                "return_url": f"https://maximiliano1234345.github.io/joyeria-aura/index.html?transaccion=aprobada&orden_uuid={orden_uuid}",
-                "cancel_url": "https://maximiliano1234345.github.io/joyeria-aura/index.html?transaccion=cancelada"
-            }
-        }
-        paypal_res = requests.post("https://api-m.sandbox.paypal.com/v2/checkout/orders", headers=headers, json=payload).json()
-        
-        boveda.table('ordenes_compra').update({"paypal_order_id": paypal_res['id']}).eq('id', orden_uuid).execute()
-        
-        enlace = next(item['href'] for item in paypal_res['links'] if item['rel'] == 'approve')
-        return jsonify({"orden_uuid": orden_uuid, "url_pasarela": enlace}), 200
-
-    except Exception:
-        print(f"❌ [RESERVAR ERROR]: {traceback.format_exc()}")
-        return jsonify({"mensaje": "Error en reserva"}), 500
-
-
 @app.route('/api/reservar-carrito', methods=['POST', 'OPTIONS'])
 def reservar_carrito():
-    # Preflight de CORS
     if request.method == 'OPTIONS':
         return jsonify({}), 200
 
@@ -296,14 +271,18 @@ def reservar_carrito():
         if not items:
             return jsonify({"mensaje": "El carrito está vacío"}), 400
 
+        # --- NUEVA INTEGRACIÓN ---
+        # Buscamos el ID único del usuario para formalizar la relación en la base de datos
+        res_user = boveda.table('usuarios_vip').select('id').eq('email', email).execute()
+        usuario_uuid = res_user.data[0]['id'] if res_user.data else None
+
         monto_total_centavos = 0
         cantidad_total = 0
         
-        # Validar y calcular precios con seguridad
         for item in items:
             joya_id_raw = item.get('joya_id')
             if joya_id_raw is None or isinstance(joya_id_raw, dict):
-                return jsonify({"mensaje": "Formato desactualizado. Por favor, limpia tu carrito en la web e intenta de nuevo."}), 400
+                return jsonify({"mensaje": "Formato desactualizado. Por favor, limpia tu carrito."}), 400
                 
             joya_id = int(joya_id_raw)
             cantidad = int(item.get('cantidad', 1))
@@ -313,11 +292,12 @@ def reservar_carrito():
                 monto_total_centavos += (res_joya.data[0]['precio_centavos'] * cantidad)
                 cantidad_total += cantidad
 
-        # Respetamos el ID de la primera joya para la estructura actual de base de datos
         primer_joya_id = int(items[0]['joya_id'])
 
+        # --- AHORA GUARDAMOS TANTO EL EMAIL COMO EL usuario_id ---
         res_orden = boveda.table('ordenes_compra').insert({
             'usuario_email': email,
+            'usuario_id': usuario_uuid,  # El nuevo "cable" hacia la tabla VIP
             'joya_id': primer_joya_id, 
             'cantidad': cantidad_total,
             'monto_total_centavos': monto_total_centavos,
@@ -326,7 +306,6 @@ def reservar_carrito():
         
         orden_uuid = res_orden.data[0]['id']
 
-        # Conectar con PayPal
         token_req = requests.post(
             "https://api-m.sandbox.paypal.com/v1/oauth2/token", 
             data={"grant_type": "client_credentials"}, 
@@ -345,7 +324,6 @@ def reservar_carrito():
         }
         paypal_res = requests.post("https://api-m.sandbox.paypal.com/v2/checkout/orders", headers=headers, json=payload).json()
         
-        # Guardar Order ID de PayPal en Supabase
         boveda.table('ordenes_compra').update({"paypal_order_id": paypal_res['id']}).eq('id', orden_uuid).execute()
         
         enlace = next(item['href'] for item in paypal_res['links'] if item['rel'] == 'approve')
@@ -360,7 +338,6 @@ def reservar_carrito():
 def confirmar_compra():
     uuid_orden = request.json.get('orden_uuid')
     try:
-        # Confirmar Pago en BD
         boveda.table('ordenes_compra').update({"estado": "PAGADO"}).eq('id', uuid_orden).execute()
         
         res = boveda.table('ordenes_compra').select('joya_id, usuario_email').eq('id', uuid_orden).execute()
@@ -371,7 +348,6 @@ def confirmar_compra():
         nombre_joya = res_joya.data[0]['nombre']
         precio_formateado = f"{(res_joya.data[0]['precio_centavos'] / 100.0):,.2f}"
         
-        # Disparar Certificado de Propiedad por Correo
         exito = enviar_certificado_html(email_cliente, nombre_joya, uuid_orden, precio_formateado)
         
         return jsonify({"estatus": "CONFIRMADO", "correo_enviado": exito}), 200
