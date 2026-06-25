@@ -86,7 +86,6 @@
                 </div>
                 <h4 class="font-serif mt-4">Solitario Eternidad</h4>
                 <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 2px;">$ 24,500 MXN</p>
-                <!-- BOTÓN ACTUALIZADO -->
                 <button class="btn-premium mt-3" onclick="agregarAlCarrito(1)" style="padding: 10px 20px; font-size: 0.7rem;">Añadir al Carrito</button>
             </div>
 
@@ -109,7 +108,6 @@
                 </div>
                 <h4 class="font-serif mt-4">Crossover Lumina</h4>
                 <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 2px;">$ 16,800 MXN</p>
-                <!-- BOTÓN ACTUALIZADO -->
                 <button class="btn-premium mt-3" onclick="agregarAlCarrito(2)" style="padding: 10px 20px; font-size: 0.7rem;">Añadir al Carrito</button>
             </div>
 
@@ -132,7 +130,6 @@
                 </div>
                 <h4 class="font-serif mt-4">Esencia Pura</h4>
                 <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 2px;">$ 3,200 MXN</p>
-                <!-- BOTÓN ACTUALIZADO -->
                 <button class="btn-premium mt-3" onclick="agregarAlCarrito(3)" style="padding: 10px 20px; font-size: 0.7rem;">Añadir al Carrito</button>
             </div>
 
@@ -174,29 +171,62 @@
         </div>
     </footer>
 
-    <!-- LOGIN MODAL -->
+    <!-- ========================================================= -->
+    <!-- NUEVO LOGIN / REGISTER MODAL (Autenticación VIP 2FA)      -->
+    <!-- ========================================================= -->
     <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content luxury-modal">
                 <div class="modal-header border-0 pb-0">
-                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close" onclick="reiniciarModalLogin()"></button>
                 </div>
                 <div class="modal-body text-center pt-0 px-4 pb-4">
-                    <h2 class="font-serif mb-2" style="font-size: 2.2rem;">Bienvenida</h2>
-                    <p class="text-muted mb-5" style="font-size: 0.85rem; letter-spacing: 1px;">Accede a tu colección privada.</p>
-                    <form>
+                    <h2 class="font-serif mb-2" style="font-size: 2.2rem;">Bóveda AURA</h2>
+                    <p class="text-muted mb-4" style="font-size: 0.85rem;" id="auth-subtitle">Accede a tu colección privada.</p>
+                    
+                    <!-- BOTONES SELECTORES (Login vs Registro) -->
+                    <div class="d-flex justify-content-center mb-4" id="auth-toggle-btns">
+                        <button class="btn btn-outline-dark mx-1 fw-bold" id="tab-login" onclick="mostrarSeccion('login')">Iniciar Sesión</button>
+                        <button class="btn btn-outline-dark mx-1 text-muted border-0" id="tab-registro" onclick="mostrarSeccion('registro')">Crear Cuenta</button>
+                    </div>
+
+                    <!-- PASO 1A: INICIAR SESIÓN -->
+                    <div id="auth-login-form">
+                        <div class="mb-3 text-start">
+                            <input type="email" id="login-email" class="form-control form-luxury" placeholder="Correo Electrónico">
+                        </div>
                         <div class="mb-4 text-start">
-                            <input type="email" class="form-control form-luxury" placeholder="Correo Electrónico" required>
+                            <input type="password" id="login-password" class="form-control form-luxury" placeholder="Contraseña">
                         </div>
-                        <div class="mb-5 text-start">
-                            <input type="password" class="form-control form-luxury" placeholder="Contraseña" required>
-                            <div class="text-end mt-2">
-                                <a href="#" style="font-size: 0.7rem; color: var(--ciruela-oscuro); text-decoration: none; text-transform: uppercase; letter-spacing: 1px;">¿Olvidaste tu contraseña?</a>
-                            </div>
+                        <button type="button" class="btn-solid" id="btn-login" onclick="procesarLogin()">Entrar</button>
+                    </div>
+
+                    <!-- PASO 1B: CREAR CUENTA (Oculto por defecto) -->
+                    <div id="auth-registro-form" style="display: none;">
+                        <div class="mb-3 text-start">
+                            <input type="text" id="reg-usuario" class="form-control form-luxury" placeholder="Nombre de Usuario">
                         </div>
-                        <button type="submit" class="btn-solid">Ingresar</button>
-                        <p class="mt-4" style="font-size: 0.8rem; color: #666;">¿No tienes cuenta? <a href="#" style="color: var(--oro-rosa-cenizo); text-decoration: none; font-weight: 500;">Crear cuenta</a></p>
-                    </form>
+                        <div class="mb-3 text-start">
+                            <input type="tel" id="reg-telefono" class="form-control form-luxury" placeholder="Número de Teléfono">
+                        </div>
+                        <div class="mb-3 text-start">
+                            <input type="email" id="reg-email" class="form-control form-luxury" placeholder="Correo Electrónico">
+                        </div>
+                        <div class="mb-4 text-start">
+                            <input type="password" id="reg-password" class="form-control form-luxury" placeholder="Crear Contraseña">
+                        </div>
+                        <button type="button" class="btn-solid" id="btn-registro" onclick="procesarRegistro()">Registrarse</button>
+                    </div>
+
+                    <!-- PASO 2: VERIFICACIÓN 2FA (Token al correo) -->
+                    <div id="auth-paso-2" style="display: none;">
+                        <div class="mb-4 text-start">
+                            <input type="text" id="auth-codigo-input" class="form-control form-luxury text-center" placeholder="Token de 6 dígitos" maxlength="6" style="letter-spacing: 5px; font-size: 1.2rem;">
+                        </div>
+                        <button type="button" class="btn-solid" id="btn-verificar-codigo" onclick="verificarCodigoAcceso()">Verificar Token</button>
+                        <p class="mt-4" style="font-size: 0.8rem;"><a href="#" onclick="reiniciarModalLogin()" style="color: var(--oro-rosa-cenizo); text-decoration: none;">Cancelar</a></p>
+                    </div>
+                    
                 </div>
             </div>
         </div>
@@ -220,7 +250,7 @@
                     <span class="text-uppercase" style="letter-spacing: 2px; font-size: 0.85rem;">Total Estimado</span>
                     <span class="fw-medium" id="total-carrito">$ 0 MXN</span>
                 </div>
-                <!-- BOTÓN ACTUALIZADO -->
+                <!-- BOTÓN ACTUALIZADO (Ahora validará si hay sesión antes de comprar en app.js) -->
                 <button class="btn-checkout" onclick="procesarCheckoutCarrito()">Completar la Inversión</button>
             </div>
         </div>
