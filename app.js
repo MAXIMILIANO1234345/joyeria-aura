@@ -1,3 +1,58 @@
+/* =========================================================
+   0. MOTOR DE FÍSICAS CUSTOM PARA A-FRAME (Interacción VIP)
+   ========================================================= */
+if (typeof AFRAME !== 'undefined') {
+    AFRAME.registerComponent('drag-rotate-component', {
+        schema: { speed: { default: 1.5 } },
+        init: function () {
+            this.ifMouseDown = false;
+            this.x_cord = 0;
+            this.y_cord = 0;
+
+            this.onMouseDown = this.onMouseDown.bind(this);
+            this.onMouseUp = this.onMouseUp.bind(this);
+            this.onMouseMove = this.onMouseMove.bind(this);
+
+            // Al cargar la escena, atamos los eventos al canvas 3D
+            this.el.sceneEl.addEventListener('loaded', () => {
+                const canvas = this.el.sceneEl.canvas;
+                canvas.addEventListener('mousedown', this.onMouseDown);
+                canvas.addEventListener('mouseup', this.onMouseUp);
+                canvas.addEventListener('mousemove', this.onMouseMove);
+                canvas.addEventListener('mouseleave', this.onMouseUp);
+
+                // Soporte táctil de alta gama para móviles
+                canvas.addEventListener('touchstart', this.onMouseDown, {passive: false});
+                canvas.addEventListener('touchend', this.onMouseUp);
+                canvas.addEventListener('touchmove', this.onMouseMove, {passive: false});
+            });
+        },
+        onMouseDown: function (event) {
+            this.ifMouseDown = true;
+            this.x_cord = event.clientX || (event.touches ? event.touches[0].clientX : 0);
+            this.y_cord = event.clientY || (event.touches ? event.touches[0].clientY : 0);
+        },
+        onMouseUp: function () {
+            this.ifMouseDown = false;
+        },
+        onMouseMove: function (event) {
+            if (this.ifMouseDown) {
+                let temp_x = event.clientX || (event.touches ? event.touches[0].clientX : 0);
+                let temp_y = event.clientY || (event.touches ? event.touches[0].clientY : 0);
+                let x_temp = temp_x - this.x_cord;
+                let y_temp = temp_y - this.y_cord;
+
+                this.el.object3D.rotation.y += x_temp * this.data.speed / 100;
+                this.el.object3D.rotation.x += y_temp * this.data.speed / 100;
+
+                this.x_cord = temp_x;
+                this.y_cord = temp_y;
+            }
+        }
+    });
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
 
     /* =========================================================
@@ -61,7 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (estatusTransaccion === 'aprobada' && ordenUuid) {
         window.history.replaceState({}, document.title, window.location.pathname);
 
-        // Alerta elegante de pago aprobado
         mostrarAlertaVIP(
             "Inversión Asegurada", 
             "Tu adquisición ha sido capturada por la Bóveda Central. Estamos generando tu Recibo de Transacción y tu Certificado de Autenticidad...",
@@ -77,7 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             if (data.estatus === 'CONFIRMADO' && data.correo_enviado) {
                 setTimeout(() => {
-                    // Notificación actualizada para dos correos
                     mostrarToastVIP(`✉️ Recibo y Certificado digital despachados a tu correo electrónico.`);
                 }, 3000); 
             } else if (data.estatus === 'YA_PROCESADO') {
@@ -95,7 +148,6 @@ document.addEventListener('DOMContentLoaded', () => {
         mostrarToastVIP("Transacción pausada. Tu selección seguirá reservada en bóveda.");
     }
 
-    // Inicializar la vista del carrito al cargar la página
     actualizarUI();
 });
 
@@ -108,7 +160,6 @@ function mostrarAlertaVIP(titulo, mensaje, icono = 'bi-gem') {
     document.getElementById('aura-alert-title').innerText = titulo;
     document.getElementById('aura-alert-message').innerText = mensaje;
     
-    // Cambiamos el ícono dinámicamente según la ocasión
     const iconElement = document.getElementById('aura-alert-icon');
     iconElement.className = `bi ${icono} mb-2 mt-3`;
     iconElement.style.fontSize = '2.5rem';
@@ -121,7 +172,7 @@ function mostrarAlertaVIP(titulo, mensaje, icono = 'bi-gem') {
 function mostrarToastVIP(mensaje) {
     document.getElementById('aura-toast-message').innerText = mensaje;
     const toastEl = document.getElementById('auraToast');
-    const toast = new bootstrap.Toast(toastEl, { delay: 4500 }); // Desaparece en 4.5 segundos
+    const toast = new bootstrap.Toast(toastEl, { delay: 4500 });
     toast.show();
 }
 
@@ -307,14 +358,13 @@ async function procesarCheckoutCarrito() {
 
 
 /* =========================================================
-   6. SHOWROOM INMERSIVO VIP (Venta interactiva)
+   6. SHOWROOM INMERSIVO VIP (Luminoso y controlable)
    ========================================================= */
 
 function abrirVistaInmersiva(id) {
     const joya = catalogoJoyas[id];
     if(!joya) return;
 
-    // 1. Llenar los datos de venta (Storytelling)
     document.getElementById('immersive-title').innerText = joya.nombre;
     document.getElementById('immersive-story').innerText = joya.historia;
     document.getElementById('immersive-purity').innerText = joya.pureza;
@@ -322,41 +372,43 @@ function abrirVistaInmersiva(id) {
     document.getElementById('immersive-size').innerText = joya.talla;
     document.getElementById('immersive-price').innerText = `$ ${joya.precio.toLocaleString()} MXN`;
 
-    // 2. Configurar el botón de comprar
     const btnAdd = document.getElementById('btn-immersive-add');
     btnAdd.onclick = () => {
         agregarAlCarrito(id);
         cerrarVistaInmersiva();
     };
 
-    // 3. Inyectar el motor 3D limpio y con controles de mouse activados (look-controls="enabled: true")
+    // Inyectamos la escena A-Frame. Fíjate que al modelo le ponemos el componente "drag-rotate-component".
     const container3D = document.getElementById('immersive-3d-container');
     container3D.innerHTML = `
         <a-scene embedded renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true; alpha: true" vr-mode-ui="enabled: false" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;">
             <a-assets>
                 <a-asset-item id="modelo-inmersivo-${id}" src="${joya.modelo}"></a-asset-item>
             </a-assets>
-            <a-light type="ambient" color="#ffffff" intensity="2"></a-light>
-            <a-light type="directional" position="2 4 2" color="#fff5e6" intensity="4.5" castShadow="true"></a-light>
-            <a-light type="directional" position="-3 1 -2" color="#e6f0ff" intensity="2.5"></a-light>
             
-            <!-- Animación de rotación constante para exhibición -->
-            <a-entity gltf-model="#modelo-inmersivo-${id}" position="0 0 0" rotation="${joya.rotacion}" scale="${joya.escala}" 
-                      animation="property: rotation; to: 0 360 0; loop: true; dur: 25000; easing: linear;"></a-entity>
+            <a-light type="ambient" color="#ffffff" intensity="3"></a-light>
+            <a-light type="directional" position="2 4 2" color="#fff5e6" intensity="5" castShadow="true"></a-light>
+            <a-light type="directional" position="-3 1 -2" color="#e6f0ff" intensity="3.5"></a-light>
             
-            <!-- Cámara interactiva: el usuario puede arrastrar con el mouse para mirar alrededor -->
-            <a-entity class="lente-camara" camera position="0 0 5.0" look-controls="enabled: true" wasd-controls="enabled: false"></a-entity>
+            <a-entity gltf-model="#modelo-inmersivo-${id}" 
+                      position="0 0 0" 
+                      rotation="${joya.rotacion}" 
+                      scale="${joya.escala}" 
+                      drag-rotate-component="speed: 2.0"
+                      class="joya-interactiva">
+            </a-entity>
+            
+            <a-entity class="lente-camara" camera position="0 0 4.5" look-controls="enabled: false" wasd-controls="enabled: false"></a-entity>
         </a-scene>
-        <div style="position: absolute; bottom: 30px; color: #888; font-family: var(--font-sans); letter-spacing: 2px; font-size: 0.8rem; pointer-events: none;">
-            <i class="bi bi-arrows-move me-2"></i> ARRASTRA PARA INSPECCIONAR
+        
+        <div style="position: absolute; bottom: 30px; color: var(--ciruela-oscuro); font-family: var(--font-sans); letter-spacing: 2px; font-size: 0.8rem; pointer-events: none; opacity: 0.6; font-weight: 500;">
+            <i class="bi bi-arrows-move me-2"></i> HAZ CLIC Y ARRASTRA PARA INSPECCIONAR
         </div>
     `;
 
-    // 4. Mostrar la vista con animación suave
     const overlay = document.getElementById('immersive-product-view');
     overlay.style.display = 'block';
     
-    // Bloquear el scroll de la página de fondo
     document.body.style.overflow = 'hidden';
 
     setTimeout(() => {
@@ -370,11 +422,9 @@ function cerrarVistaInmersiva() {
     
     setTimeout(() => {
         overlay.style.display = 'none';
-        // Limpiamos el contenedor 3D para liberar WebGL y memoria RAM
         document.getElementById('immersive-3d-container').innerHTML = ''; 
-        // Restaurar el scroll de la página
         document.body.style.overflow = 'auto';
-    }, 500); // Esperar a que termine la transición CSS
+    }, 500); 
 }
 
 
@@ -504,7 +554,7 @@ async function verificarCodigoAcceso() {
             );
             
             reiniciarModalLogin();
-            gestionarAccesoPerfil(); // Abre el panel directamente
+            gestionarAccesoPerfil(); 
         } else {
             mostrarToastVIP("Error: " + data.mensaje);
         }
@@ -573,7 +623,6 @@ async function cargarDatosPerfil(emailUsuario) {
                 let htmlPedidos = '';
                 datos.pedidos.forEach(pedido => {
                     
-                    // Integración de Botón de Descarga de Certificado en PDF
                     let botonDescarga = '';
                     if (pedido.estado === 'PAGADO') {
                         botonDescarga = `
