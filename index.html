@@ -5,9 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AURA | Alta Joyería</title>
 
-    <!-- 1. Deidades externas (Bootstrap e Iconos de Bootstrap perfectamente alineados) -->
+    <!-- 1. Deidades externas (Bootstrap e Iconos) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- MOTOR 3D A-FRAME -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
     <!-- 2. Tipografías de lujo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,7 +23,7 @@
 </head>
 <body>
 
-    <!-- NAVBAR CORREGIDO (Iconos cambiados a Bootstrap Icons nativos) -->
+    <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg fixed-top navbar-glass animate-on-load">
         <div class="container-fluid px-5">
             <div class="d-flex align-items-center w-100">
@@ -30,11 +33,9 @@
                 </ul>
                 <a class="brand-logo position-absolute top-50 start-50 translate-middle" href="#">AURA</a>
                 <ul class="navbar-nav ms-auto flex-row align-items-center nav-icons">
-                    <!-- Icono de Login reparado -->
                     <li class="nav-item" data-bs-toggle="modal" data-bs-target="#loginModal">
                         <i class="bi bi-person"></i>
                     </li>
-                    <!-- Icono de Carrito reparado -->
                     <li class="nav-item" data-bs-toggle="offcanvas" data-bs-target="#cartDrawer">
                         <i class="bi bi-bag position-relative">
                             <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="width: 8px; height: 8px;"></span>
@@ -59,34 +60,90 @@
         </div>
     </header>
 
-    <!-- SECCIÓN GALERÍA CORREGIDA (Inyectada la clase .product-card a cada columna) -->
+    <!-- SECCIÓN GALERÍA -->
     <section id="galeria" class="container editorial-section">
         <h2 class="text-center mb-5 font-serif reveal" style="font-size: 3rem;">Nuevas Adquisiciones</h2>
         <div class="row g-5">
-            <!-- Producto 1 -->
+            
+            <!-- PRODUCTO 1 -->
             <div class="col-md-4 reveal text-center product-card">
-                <div class="img-container">
-                    <img src="Gemini_Generated_Image_zfe1guzfe1guzfe1.png" alt="Solitario Eternidad">
+                <!-- Marco Ghost de borde sutil calibrado a 4/5 -->
+                <div class="img-container" style="position: relative; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.03); aspect-ratio: 4/5; overflow: hidden;">
+                    <!-- Escudo Protector de clicks -->
+                    <div style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20;"></div>
+                    
+                    <a-scene embedded renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true; alpha: true" vr-mode-ui="enabled: false" style="width: 100%; height: 100%;">
+                        <a-assets>
+                            <a-asset-item id="modelo-1" src="anillo_mariposa.glb"></a-asset-item>
+                        </a-assets>
+
+                        <!-- Luces -->
+                        <a-light type="ambient" color="#ffffff" intensity="2"></a-light>
+                        <a-light type="directional" position="2 4 2" color="#fff5e6" intensity="4.5" castShadow="true"></a-light>
+                        <a-light type="directional" position="-3 1 -2" color="#e6f0ff" intensity="2.5"></a-light>
+                        <a-light type="point" color="#ffffff" intensity="4" distance="15" animation="property: position; from: -5 2 2; to: 5 -1 2; dir: alternate; dur: 4000; loop: true; easing: easeInOutSine"></a-light>
+
+                        <!-- 1. OBJETO CENTRADO Y ORIENTADO -->
+<a-entity gltf-model="#modelo-1" position="0 0 0" rotation="15 -20 10" scale="2.5 2.5 2.5"></a-entity>
+                        <!-- 2. TRÍPODE DE CÁMARA INICIAL (Distancia ajustada para retrato) -->
+                        <a-entity class="rig-camara" position="0 0 0" rotation="10 0 0">
+                            <a-entity class="lente-camara" camera position="-4 0 3" look-controls="enabled: false" wasd-controls="enabled: false"></a-entity>
+                        </a-entity>
+                    </a-scene>
                 </div>
-                <h4 class="font-serif">Solitario Eternidad</h4>
+                <h4 class="font-serif mt-4">Solitario Eternidad</h4>
                 <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 2px;">$ 24,500 MXN</p>
+                <button class="btn-premium mt-3" data-id="1" onclick="agregarAlCarrito(this)" style="padding: 10px 20px; font-size: 0.7rem;">Añadir al Carrito</button>
             </div>
-            <!-- Producto 2 -->
+
+            <!-- PRODUCTO 2 -->
             <div class="col-md-4 reveal text-center product-card" style="transition-delay: 0.2s; margin-top: 50px;">
-                <div class="img-container">
-                    <img src="Gemini_Generated_Image_3v1toy3v1toy3v1t.png" alt="Crossover Lumina" onerror="this.src='https://images.unsplash.com/photo-1599643478514-46b1fd871165?q=80&w=600'">
+                <div class="img-container" style="position: relative; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.03); aspect-ratio: 4/5; overflow: hidden;">
+                    <div style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20;"></div>
+                    
+                    <a-scene embedded renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true; alpha: true" vr-mode-ui="enabled: false" style="width: 100%; height: 100%;">
+                        <a-assets><a-asset-item id="modelo-2" src="anillo.glb"></a-asset-item></a-assets>
+                        <a-light type="ambient" color="#ffffff" intensity="2"></a-light>
+                        <a-light type="directional" position="2 4 2" color="#fff5e6" intensity="4.5" castShadow="true"></a-light>
+                        <a-light type="directional" position="-3 1 -2" color="#e6f0ff" intensity="2.5"></a-light>
+                        <a-light type="point" color="#ffffff" intensity="4" distance="15" animation="property: position; from: -5 2 2; to: 5 -1 2; dir: alternate; dur: 4000; loop: true; easing: easeInOutSine"></a-light>
+
+                        <a-entity gltf-model="#modelo-2" position="0 0 0" rotation="15 -20 10" scale="1 1 1"></a-entity>
+
+                        <a-entity class="rig-camara" position="0 0 0" rotation="10 0 0">
+                            <a-entity class="lente-camara" camera position="0 0 5.0" look-controls="enabled: false" wasd-controls="enabled: false"></a-entity>
+                        </a-entity>
+                    </a-scene>
                 </div>
-                <h4 class="font-serif">Crossover Lumina</h4>
+                <h4 class="font-serif mt-4">Crossover Lumina</h4>
                 <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 2px;">$ 16,800 MXN</p>
+                <button class="btn-premium mt-3" data-id="2" onclick="agregarAlCarrito(this)" style="padding: 10px 20px; font-size: 0.7rem;">Añadir al Carrito</button>
             </div>
-            <!-- Producto 3 -->
+
+            <!-- PRODUCTO 3 -->
             <div class="col-md-4 reveal text-center product-card" style="transition-delay: 0.4s;">
-                <div class="img-container">
-                    <img src="Gemini_Generated_Image_mn8mqdmn8mqdmn8m.png" alt="Esencia Pura">
+                <div class="img-container" style="position: relative; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.03); aspect-ratio: 4/5; overflow: hidden;">
+                    <div style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20;"></div>
+                    
+                    <a-scene embedded renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true; alpha: true" vr-mode-ui="enabled: false" style="width: 100%; height: 100%;">
+                        <a-assets><a-asset-item id="modelo-3" src="metaretail_anillo_panthere.glb"></a-asset-item></a-assets>
+                        <a-light type="ambient" color="#ffffff" intensity="2"></a-light>
+                        <a-light type="directional" position="2 4 2" color="#fff5e6" intensity="4.5" castShadow="true"></a-light>
+                        <a-light type="directional" position="-3 1 -2" color="#e6f0ff" intensity="2.5"></a-light>
+                        <a-light type="point" color="#ffffff" intensity="4" distance="15" animation="property: position; from: -5 2 2; to: 5 -1 2; dir: alternate; dur: 4000; loop: true; easing: easeInOutSine"></a-light>
+
+                        <a-entity gltf-model="#modelo-3" position="0 0 0" rotation="15 -20 10" scale="1 1 1"></a-entity>
+
+                        <a-entity class="rig-camara" position="0 0 0" rotation="10 0 0">
+                            <a-entity class="lente-camara" camera position="0 0 5.0" look-controls="enabled: false" wasd-controls="enabled: false"></a-entity>
+                        </a-entity>
+                    </a-scene>
                 </div>
-                <h4 class="font-serif">Esencia Pura</h4>
+                <h4 class="font-serif mt-4">Esencia Pura</h4>
                 <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 2px;">$ 3,200 MXN</p>
+                <button class="btn-premium mt-3" data-id="3" onclick="agregarAlCarrito(this)" style="padding: 10px 20px; font-size: 0.7rem;">Añadir al Carrito</button>
             </div>
+
         </div>
     </section>
 
@@ -175,12 +232,36 @@
                     <span class="text-uppercase" style="letter-spacing: 2px; font-size: 0.85rem;">Total Estimado</span>
                     <span class="fw-medium">$ 16,800 MXN</span>
                 </div>
-                <!-- El botón transaccional de Python amarrado al ID 2 -->
                 <button class="btn-checkout" onclick="procesarPedido(2)">Completar el Pedido</button>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- 4. DIRECTOR DE CÁMARA (Tomas calibradas para marcos 4/5 verticales) -->
+    <script>
+        const tomas = [
+            { rotacion: "10 0 0",    distancia: "0 0 5.0" },  // Toma 1: Frontal con suficiente aire vertical
+            { rotacion: "20 45 0",   distancia: "0 0 4.5" },  // Toma 2: Perspectiva lateral
+            { rotacion: "40 -30 0",  distancia: "0 0 4.8" },  // Toma 3: Picada
+            { rotacion: "-5 -15 0",  distancia: "0 0 5.2" }   // Toma 4: Desde abajo
+        ];
+
+        let tomaActual = 0;
+        
+        setInterval(() => {
+            tomaActual = (tomaActual + 1) % tomas.length;
+            const toma = tomas[tomaActual];
+
+            // Seleccionamos TODOS los trípodes y lentes y los cortamos simultáneamente
+            const rigs = document.querySelectorAll('.rig-camara');
+            const lentes = document.querySelectorAll('.lente-camara');
+
+            rigs.forEach(rig => rig.setAttribute('rotation', toma.rotacion));
+            lentes.forEach(lente => lente.setAttribute('position', toma.distancia));
+            
+        }, 4000); 
+    </script>
 </body>
 </html>
