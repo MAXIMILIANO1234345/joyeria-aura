@@ -33,7 +33,7 @@
                 </ul>
                 <a class="brand-logo position-absolute top-50 start-50 translate-middle" href="#">AURA</a>
                 <ul class="navbar-nav ms-auto flex-row align-items-center nav-icons">
-                    <!-- ACTUALIZADO: El ícono ahora llama a una función inteligente en vez de abrir ciegamente el modal -->
+                    <!-- Ícono del Perfil / Login -->
                     <li class="nav-item" onclick="gestionarAccesoPerfil()">
                         <i class="bi bi-person" style="cursor: pointer;"></i>
                     </li>
@@ -185,7 +185,7 @@
                     <h2 class="font-serif mb-2" style="font-size: 2.2rem;">Bóveda AURA</h2>
                     <p class="text-muted mb-4" style="font-size: 0.85rem;" id="auth-subtitle">Accede a tu colección privada.</p>
                     
-                    <!-- BOTONES SELECTORES (Login vs Registro) -->
+                    <!-- BOTONES SELECTORES -->
                     <div class="d-flex justify-content-center mb-4" id="auth-toggle-btns">
                         <button class="btn btn-outline-dark mx-1 fw-bold" id="tab-login" onclick="mostrarSeccion('login')">Iniciar Sesión</button>
                         <button class="btn btn-outline-dark mx-1 text-muted border-0" id="tab-registro" onclick="mostrarSeccion('registro')">Crear Cuenta</button>
@@ -202,7 +202,7 @@
                         <button type="button" class="btn-solid" id="btn-login" onclick="procesarLogin()">Entrar</button>
                     </div>
 
-                    <!-- PASO 1B: CREAR CUENTA (Oculto por defecto) -->
+                    <!-- PASO 1B: CREAR CUENTA -->
                     <div id="auth-registro-form" style="display: none;">
                         <div class="mb-3 text-start">
                             <input type="text" id="reg-usuario" class="form-control form-luxury" placeholder="Nombre de Usuario">
@@ -219,7 +219,7 @@
                         <button type="button" class="btn-solid" id="btn-registro" onclick="procesarRegistro()">Registrarse</button>
                     </div>
 
-                    <!-- PASO 2: VERIFICACIÓN 2FA (Token al correo) -->
+                    <!-- PASO 2: VERIFICACIÓN 2FA -->
                     <div id="auth-paso-2" style="display: none;">
                         <div class="mb-4 text-start">
                             <input type="text" id="auth-codigo-input" class="form-control form-luxury text-center" placeholder="Token de 6 dígitos" maxlength="6" style="letter-spacing: 5px; font-size: 1.2rem;">
@@ -234,7 +234,7 @@
     </div>
 
     <!-- ========================================================= -->
-    <!-- NUEVO: OFFCANVAS DE PERFIL DEL CLIENTE (MI BÓVEDA)        -->
+    <!-- OFFCANVAS DE PERFIL DEL CLIENTE (MI BÓVEDA)               -->
     <!-- ========================================================= -->
     <div class="offcanvas offcanvas-start" tabindex="-1" id="profileDrawer" aria-labelledby="profileDrawerLabel" data-bs-backdrop="true">
         <div class="offcanvas-header border-bottom">
@@ -243,7 +243,6 @@
         </div>
         <div class="offcanvas-body d-flex flex-column p-4">
             
-            <!-- SECCIÓN 1: DATOS DEL CLIENTE -->
             <div class="mb-4 pb-4 border-bottom">
                 <h6 class="text-uppercase text-muted mb-3" style="letter-spacing: 2px; font-size: 0.75rem;">Datos del Coleccionista</h6>
                 <p class="mb-1 fw-bold font-serif" style="font-size: 1.2rem;" id="perfil-nombre">Cargando...</p>
@@ -251,16 +250,13 @@
                 <p class="mb-0 text-muted" style="font-size: 0.9rem;" id="perfil-telefono">Cargando...</p>
             </div>
 
-            <!-- SECCIÓN 2: COMPRAS Y PEDIDOS -->
             <div class="mb-4 pb-4 border-bottom flex-grow-1">
                 <h6 class="text-uppercase text-muted mb-3" style="letter-spacing: 2px; font-size: 0.75rem;">Historial de Adquisiciones</h6>
                 <div id="perfil-pedidos-container" style="max-height: 250px; overflow-y: auto;">
-                    <!-- Aquí se inyectarán las compras con JS dinámicamente -->
                     <p class="text-muted" style="font-size: 0.9rem; font-style: italic;">Aún no tienes piezas en tu bóveda.</p>
                 </div>
             </div>
 
-            <!-- SECCIÓN 3: SERVICIO AL CLIENTE & CERRAR SESIÓN -->
             <div class="mt-auto">
                 <h6 class="text-uppercase text-muted mb-3" style="letter-spacing: 2px; font-size: 0.75rem;">Concierge (Servicio al Cliente)</h6>
                 <a href="#" class="btn btn-outline-dark w-100 mb-2 font-serif d-flex align-items-center justify-content-center" style="border-radius: 0; padding: 10px; text-decoration: none;">
@@ -284,7 +280,6 @@
         </div>
         <div class="offcanvas-body d-flex flex-column p-0">
             <div class="flex-grow-1 p-4" id="contenedor-carrito">
-                <!-- CONTENEDOR VACÍO LISTO PARA APP.JS -->
                 <div class="text-center mt-5">
                     <p class="text-muted font-serif" style="font-size: 1.2rem; font-style: italic;">Tu reserva está vacía.</p>
                 </div>
@@ -294,15 +289,47 @@
                     <span class="text-uppercase" style="letter-spacing: 2px; font-size: 0.85rem;">Total Estimado</span>
                     <span class="fw-medium" id="total-carrito">$ 0 MXN</span>
                 </div>
-                <!-- BOTÓN ACTUALIZADO (Valida sesión antes de comprar) -->
                 <button class="btn-checkout" onclick="procesarCheckoutCarrito()">Completar la Inversión</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- NUEVO: SISTEMA DE ALERTAS VIP (Reemplazo de 'alert()')    -->
+    <!-- ========================================================= -->
+    
+    <!-- 1. ALERTA MODAL (Para mensajes críticos y elegantes) -->
+    <div class="modal fade" id="auraAlertModal" tabindex="-1" aria-hidden="true" style="z-index: 1090;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content luxury-modal" style="border: 1px solid var(--oro-rosa-cenizo); text-align: center;">
+                <div class="modal-header border-0 pb-0 justify-content-center" style="position: relative;">
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 15px; top: 15px;"></button>
+                    <i class="bi bi-gem mb-2 mt-3" id="aura-alert-icon" style="font-size: 2rem; color: var(--oro-rosa-cenizo);"></i>
+                </div>
+                <div class="modal-body px-5 pb-5 pt-2">
+                    <h3 class="font-serif mb-3" id="aura-alert-title" style="font-size: 1.8rem;">Aviso de Bóveda</h3>
+                    <p class="text-muted" id="aura-alert-message" style="font-size: 0.95rem; line-height: 1.6; font-family: var(--font-sans);"></p>
+                    <button type="button" class="btn-solid mt-4" data-bs-dismiss="modal" id="aura-alert-btn">Entendido</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. TOAST NOTIFICATION (Para notificaciones rápidas y sutiles) -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-4" style="z-index: 1095;">
+        <div id="auraToast" class="toast align-items-center border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true" style="background-color: var(--ciruela-oscuro); color: white;">
+            <div class="d-flex">
+                <div class="toast-body font-serif" id="aura-toast-message" style="font-size: 1.1rem; letter-spacing: 1px;">
+                    Notificación AURA.
+                </div>
+                <button type="button" class="btn-close btn-close-white me-3 m-auto shadow-none" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- 4. DIRECTOR DE CÁMARA (Tomas calibradas para marcos 4/5 verticales) -->
+    <!-- DIRECTOR DE CÁMARA 3D -->
     <script>
         const tomas = [
             { rotacion: "10 0 0",    distancia: "0 0 5.0" },  
