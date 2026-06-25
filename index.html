@@ -5,25 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AURA | Alta Joyería</title>
 
-    <!-- 1. Deidades externas (Bootstrap e Iconos) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-    <!-- MOTOR 3D A-FRAME -->
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
-    <!-- 2. Tipografías de lujo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
 
-    <!-- 3. Hoja de estilos y lógica -->
     <link rel="stylesheet" href="style.css"> 
     <script src="app.js" defer></script>
 </head>
 <body>
 
-    <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg fixed-top navbar-glass animate-on-load">
         <div class="container-fluid px-5">
             <div class="d-flex align-items-center w-100">
@@ -33,7 +28,6 @@
                 </ul>
                 <a class="brand-logo position-absolute top-50 start-50 translate-middle" href="#">AURA</a>
                 <ul class="navbar-nav ms-auto flex-row align-items-center nav-icons">
-                    <!-- Ícono del Perfil / Login -->
                     <li class="nav-item" onclick="gestionarAccesoPerfil()">
                         <i class="bi bi-person" style="cursor: pointer;"></i>
                     </li>
@@ -47,7 +41,6 @@
         </div>
     </nav>
 
-    <!-- HERO SECTION -->
     <header class="hero-container">
         <div class="hero-text">
             <h1 class="animate-on-load">Poder <span>Absoluto</span></h1>
@@ -61,12 +54,10 @@
         </div>
     </header>
 
-    <!-- SECCIÓN GALERÍA -->
     <section id="galeria" class="container editorial-section">
         <h2 class="text-center mb-5 font-serif reveal" style="font-size: 3rem;">Nuevas Adquisiciones</h2>
         <div class="row g-5">
             
-            <!-- PRODUCTO 1 -->
             <div class="col-md-4 reveal text-center product-card">
                 <div class="img-container" style="position: relative; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.03); aspect-ratio: 4/5; overflow: hidden;">
                     <div style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20;"></div>
@@ -87,10 +78,9 @@
                 </div>
                 <h4 class="font-serif mt-4">Solitario Eternidad</h4>
                 <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 2px;">$ 24,500 MXN</p>
-                <button class="btn-premium mt-3" onclick="agregarAlCarrito(1)" style="padding: 10px 20px; font-size: 0.7rem;">Añadir al Carrito</button>
+                <button class="btn-premium mt-3" onclick="abrirVistaInmersiva(1)" style="padding: 10px 20px; font-size: 0.7rem;">Explorar Pieza</button>
             </div>
 
-            <!-- PRODUCTO 2 -->
             <div class="col-md-4 reveal text-center product-card" style="transition-delay: 0.2s; margin-top: 50px;">
                 <div class="img-container" style="position: relative; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.03); aspect-ratio: 4/5; overflow: hidden;">
                     <div style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20;"></div>
@@ -109,10 +99,9 @@
                 </div>
                 <h4 class="font-serif mt-4">Crossover Lumina</h4>
                 <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 2px;">$ 16,800 MXN</p>
-                <button class="btn-premium mt-3" onclick="agregarAlCarrito(2)" style="padding: 10px 20px; font-size: 0.7rem;">Añadir al Carrito</button>
+                <button class="btn-premium mt-3" onclick="abrirVistaInmersiva(2)" style="padding: 10px 20px; font-size: 0.7rem;">Explorar Pieza</button>
             </div>
 
-            <!-- PRODUCTO 3 -->
             <div class="col-md-4 reveal text-center product-card" style="transition-delay: 0.4s;">
                 <div class="img-container" style="position: relative; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.03); aspect-ratio: 4/5; overflow: hidden;">
                     <div style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20;"></div>
@@ -131,13 +120,12 @@
                 </div>
                 <h4 class="font-serif mt-4">Esencia Pura</h4>
                 <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 2px;">$ 3,200 MXN</p>
-                <button class="btn-premium mt-3" onclick="agregarAlCarrito(3)" style="padding: 10px 20px; font-size: 0.7rem;">Añadir al Carrito</button>
+                <button class="btn-premium mt-3" onclick="abrirVistaInmersiva(3)" style="padding: 10px 20px; font-size: 0.7rem;">Explorar Pieza</button>
             </div>
 
         </div>
     </section>
 
-    <!-- ATELIER (IRIS MASK) -->
     <div class="iris-scroll-wrapper" id="atelier">
         <div class="iris-sticky-container">
             <div class="text-center" style="position: absolute; z-index: 0;">
@@ -164,7 +152,50 @@
         </div>
     </div>
 
-    <!-- FOOTER -->
+    <div id="immersive-product-view" class="immersive-overlay" style="display: none;">
+        <button class="btn-close-immersive shadow-none" onclick="cerrarVistaInmersiva()">
+            <i class="bi bi-x-lg"></i>
+        </button>
+        <div class="container-fluid h-100 p-0">
+            <div class="row h-100 m-0">
+                <div class="col-lg-7 h-100 p-0 d-flex align-items-center justify-content-center position-relative" id="immersive-3d-container" style="background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%);">
+                    </div>
+                
+                <div class="col-lg-5 h-100 immersive-details d-flex flex-column justify-content-center p-5 text-light">
+                    <p class="text-uppercase text-muted mb-2 font-sans" style="font-size: 0.8rem; letter-spacing: 4px;">Pieza Exclusiva</p>
+                    <h2 id="immersive-title" class="font-serif mb-4 text-white" style="font-size: 3.5rem; line-height: 1;">Nombre de la Joya</h2>
+                    
+                    <div class="mb-4">
+                        <p id="immersive-story" class="fw-light mb-4 font-sans" style="font-size: 1.1rem; line-height: 1.8; color: #ccc;">Aquí va la historia de la pieza...</p>
+                    </div>
+                    
+                    <div class="specifications-box p-4 mb-5" style="border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); backdrop-filter: blur(10px);">
+                        <div class="row g-4">
+                            <div class="col-6">
+                                <span class="d-block text-muted font-sans" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px;">Pureza</span>
+                                <span id="immersive-purity" class="font-serif text-white fs-5">...</span>
+                            </div>
+                            <div class="col-6">
+                                <span class="d-block text-muted font-sans" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px;">Método</span>
+                                <span id="immersive-method" class="font-serif text-white fs-5">...</span>
+                            </div>
+                            <div class="col-6">
+                                <span class="d-block text-muted font-sans" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px;">Talla</span>
+                                <span id="immersive-size" class="font-serif text-white fs-5">...</span>
+                            </div>
+                            <div class="col-6">
+                                <span class="d-block text-muted font-sans" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px;">Inversión</span>
+                                <span id="immersive-price" class="font-serif fs-5" style="color: var(--oro-rosa-cenizo);">...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button id="btn-immersive-add" class="btn-solid w-100 py-3 text-uppercase font-sans" style="letter-spacing: 3px; font-weight: 500;">Asegurar en mi Bóveda</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <footer style="background-color: var(--ciruela-oscuro); color: #fff; padding: 60px 0 20px; border-top: 1px solid rgba(255,255,255,0.1);">
         <div class="container text-center">
             <h2 class="font-serif mb-4" style="letter-spacing: 6px;">AURA</h2>
@@ -172,9 +203,6 @@
         </div>
     </footer>
 
-    <!-- ========================================================= -->
-    <!-- LOGIN / REGISTER MODAL (Autenticación VIP 2FA)            -->
-    <!-- ========================================================= -->
     <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content luxury-modal">
@@ -185,13 +213,11 @@
                     <h2 class="font-serif mb-2" style="font-size: 2.2rem;">Bóveda AURA</h2>
                     <p class="text-muted mb-4" style="font-size: 0.85rem;" id="auth-subtitle">Accede a tu colección privada.</p>
                     
-                    <!-- BOTONES SELECTORES -->
                     <div class="d-flex justify-content-center mb-4" id="auth-toggle-btns">
                         <button class="btn btn-outline-dark mx-1 fw-bold" id="tab-login" onclick="mostrarSeccion('login')">Iniciar Sesión</button>
                         <button class="btn btn-outline-dark mx-1 text-muted border-0" id="tab-registro" onclick="mostrarSeccion('registro')">Crear Cuenta</button>
                     </div>
 
-                    <!-- PASO 1A: INICIAR SESIÓN -->
                     <div id="auth-login-form">
                         <div class="mb-3 text-start">
                             <input type="email" id="login-email" class="form-control form-luxury" placeholder="Correo Electrónico">
@@ -202,7 +228,6 @@
                         <button type="button" class="btn-solid" id="btn-login" onclick="procesarLogin()">Entrar</button>
                     </div>
 
-                    <!-- PASO 1B: CREAR CUENTA -->
                     <div id="auth-registro-form" style="display: none;">
                         <div class="mb-3 text-start">
                             <input type="text" id="reg-usuario" class="form-control form-luxury" placeholder="Nombre de Usuario">
@@ -219,7 +244,6 @@
                         <button type="button" class="btn-solid" id="btn-registro" onclick="procesarRegistro()">Registrarse</button>
                     </div>
 
-                    <!-- PASO 2: VERIFICACIÓN 2FA -->
                     <div id="auth-paso-2" style="display: none;">
                         <div class="mb-4 text-start">
                             <input type="text" id="auth-codigo-input" class="form-control form-luxury text-center" placeholder="Token de 6 dígitos" maxlength="6" style="letter-spacing: 5px; font-size: 1.2rem;">
@@ -233,9 +257,6 @@
         </div>
     </div>
 
-    <!-- ========================================================= -->
-    <!-- OFFCANVAS DE PERFIL DEL CLIENTE (MI BÓVEDA)               -->
-    <!-- ========================================================= -->
     <div class="offcanvas offcanvas-start" tabindex="-1" id="profileDrawer" aria-labelledby="profileDrawerLabel" data-bs-backdrop="true">
         <div class="offcanvas-header border-bottom">
             <h5 class="offcanvas-title font-serif" id="profileDrawerLabel" style="font-size: 1.5rem;">Mi Colección Privada</h5>
@@ -250,7 +271,6 @@
                 <p class="mb-0 text-muted" style="font-size: 0.9rem;" id="perfil-telefono">Cargando...</p>
             </div>
 
-            <!-- AQUÍ SE PREPARA EL CONTENEDOR PARA LOS CERTIFICADOS -->
             <div class="mb-4 pb-4 border-bottom flex-grow-1">
                 <h6 class="text-uppercase text-muted mb-3" style="letter-spacing: 2px; font-size: 0.75rem;">Adquisiciones y Certificados</h6>
                 <div id="perfil-pedidos-container" style="max-height: 250px; overflow-y: auto;">
@@ -273,7 +293,6 @@
         </div>
     </div>
 
-    <!-- OFFCANVAS CARRITO -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="cartDrawer" aria-labelledby="cartDrawerLabel" data-bs-backdrop="true">
         <div class="offcanvas-header">
             <h5 class="offcanvas-title font-serif" id="cartDrawerLabel">Tu Selección</h5>
@@ -295,11 +314,6 @@
         </div>
     </div>
 
-    <!-- ========================================================= -->
-    <!-- SISTEMA DE ALERTAS VIP                                    -->
-    <!-- ========================================================= -->
-    
-    <!-- 1. ALERTA MODAL (Para mensajes críticos y elegantes) -->
     <div class="modal fade" id="auraAlertModal" tabindex="-1" aria-hidden="true" style="z-index: 1090;">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content luxury-modal" style="border: 1px solid var(--oro-rosa-cenizo); text-align: center;">
@@ -316,7 +330,6 @@
         </div>
     </div>
 
-    <!-- 2. TOAST NOTIFICATION (Para notificaciones rápidas y sutiles) -->
     <div class="toast-container position-fixed bottom-0 end-0 p-4" style="z-index: 1095;">
         <div id="auraToast" class="toast align-items-center border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true" style="background-color: var(--ciruela-oscuro); color: white;">
             <div class="d-flex">
@@ -330,7 +343,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- DIRECTOR DE CÁMARA 3D -->
     <script>
         const tomas = [
             { rotacion: "10 0 0",    distancia: "0 0 5.0" },  
