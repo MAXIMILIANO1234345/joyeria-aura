@@ -207,6 +207,71 @@ h1, h2, h3, h4, h5, .brand-logo, .font-serif {
 .btn-checkout { background: var(--ciruela-oscuro); color: var(--nude-seda); padding: 18px; width: calc(100% - 80px); margin: 20px 40px; text-transform: uppercase; letter-spacing: 3px; border: none; transition: background 0.4s; }
 .btn-checkout:hover { background: var(--oro-rosa-cenizo); color: var(--ciruela-oscuro); }
 
+/* =========================================
+   9. OVERLAY INMERSIVO (SHOWROOM VIP)
+   ========================================= */
+.immersive-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--ciruela-oscuro);
+    z-index: 2000;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.immersive-overlay.active {
+    display: block;
+    opacity: 1;
+}
+
+.btn-close-immersive {
+    position: absolute;
+    top: 30px;
+    right: 40px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 2.5rem;
+    z-index: 2010;
+    cursor: pointer;
+    transition: transform 0.4s ease, color 0.3s ease;
+}
+
+.btn-close-immersive:hover {
+    transform: rotate(90deg);
+    color: var(--oro-rosa-cenizo);
+}
+
+.immersive-details {
+    background-color: #111111; /* Contraste dramático */
+    box-shadow: -15px 0 40px rgba(0,0,0,0.6);
+    z-index: 10;
+    overflow-y: auto;
+}
+
+/* Adaptación para pantallas móviles */
+@media (max-width: 991px) {
+    .immersive-overlay .row {
+        flex-direction: column;
+    }
+    #immersive-3d-container {
+        height: 50vh !important;
+    }
+    .immersive-details {
+        height: 50vh !important;
+        padding: 30px !important;
+    }
+    .btn-close-immersive {
+        top: 15px;
+        right: 20px;
+        font-size: 2rem;
+        color: var(--ciruela-oscuro); /* Contraste contra el fondo claro del 3D en móvil */
+    }
+}
+
 /* ===================================================
    ESCUDO DE ACCESIBILIDAD PRO
    =================================================== */
