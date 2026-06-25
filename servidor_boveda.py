@@ -14,6 +14,7 @@ from datetime import datetime
 load_dotenv()
 
 app = Flask(__name__)
+# Configuración global de CORS para permitir todas las solicitudes de tu frontend
 CORS(app)
 
 # Configuración de Supabase
@@ -52,6 +53,7 @@ def enviar_certificado_html(destinatario, nombre_pieza, uuid_orden, precio_mxn):
         return False
 
 # --- RUTAS API ---
+
 @app.route('/api/reservar-pieza', methods=['POST'])
 def reservar_pieza():
     try:
@@ -100,6 +102,80 @@ def reservar_pieza():
     except Exception:
         print(f"❌ [RESERVAR ERROR]: {traceback.format_exc()}")
         return jsonify({"mensaje": "Error en reserva"}), 500
+
+
+# --- NUEVA RUTA PARA EL CARRITO COMPLETO ---
+@app.route('/api/reservar-carrito', methods=['POST', 'OPTIONS'])
+def reservar_carrito():
+    # Respuesta rápida para evitar bloqueos CORS en el preflight
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+
+    try:
+        data = request.json
+        email = data.get('email')
+        items = data.get('items', [])
+
+        if not items:
+            return jsonify({"mensaje": "El carrito está vacío"}), 400
+
+        monto_total_centavos = 0
+        cantidad_total = 0
+        
+        # Sumar los precios desde la base de datos por seguridad
+        for item in items:
+            joya_id = int(item['joya_id'])
+            cantidad = int(item.get('cantidad', 1))
+            
+            res_joya = boveda.table('joyas_stock').select('precio_centavos').eq('id', joya_id).execute()
+            if res_joya.data:
+                monto_total_centavos += (res_joya.data[0]['precio_centavos'] * cantidad)
+                cantidad_total += cantidad
+
+        # Guardamos el ID de la primera joya para respetar la estructura de tu base de datos actual
+        primer_joya_id = items[0]['joya_id']
+
+        # Insertar orden en Supabase
+        res_orden = boveda.table('ordenes_compra').insert({
+            'usuario_email': email,
+            'joya_id': primer_joya_id, 
+            'cantidad': cantidad_total,
+            'monto_total_centavos': monto_total_centavos,
+            'estado': 'PENDIENTE_PAYPAL'
+        }).execute()
+        
+        orden_uuid = res_orden.data[0]['id']
+
+        # Generar token PayPal
+        token_req = requests.post(
+            "https://api-m.sandbox.paypal.com/v1/oauth2/token", 
+            data={"grant_type": "client_credentials"}, 
+            auth=(os.getenv("PAYPAL_CLIENT_ID"), os.getenv("PAYPAL_SECRET"))
+        )
+        token = token_req.json()["access_token"]
+        
+        # Crear orden en PayPal
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
+        payload = {
+            "intent": "CAPTURE",
+            "purchase_units": [{"amount": {"currency_code": "MXN", "value": f"{monto_total_centavos/100:.2f}"}}],
+            "application_context": {
+                "return_url": f"https://maximiliano1234345.github.io/joyeria-aura/index.html?transaccion=aprobada&orden_uuid={orden_uuid}",
+                "cancel_url": "https://maximiliano1234345.github.io/joyeria-aura/index.html?transaccion=cancelada"
+            }
+        }
+        paypal_res = requests.post("https://api-m.sandbox.paypal.com/v2/checkout/orders", headers=headers, json=payload).json()
+        
+        # Guardar ID de PayPal en Supabase
+        boveda.table('ordenes_compra').update({"paypal_order_id": paypal_res['id']}).eq('id', orden_uuid).execute()
+        
+        enlace = next(item['href'] for item in paypal_res['links'] if item['rel'] == 'approve')
+        return jsonify({"orden_uuid": orden_uuid, "url_pasarela": enlace}), 200
+
+    except Exception as e:
+        print(f"❌ [RESERVAR CARRITO ERROR]: {traceback.format_exc()}")
+        return jsonify({"mensaje": "Error en reserva del carrito"}), 500
+
 
 @app.route('/api/confirmar-compra', methods=['POST'])
 def confirmar_compra():
