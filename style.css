@@ -156,7 +156,6 @@ h1, h2, h3, h4, h5, .brand-logo, .font-serif {
 .editorial-section { padding: 100px 0 150px; }
 .img-container { background: transparent; overflow: hidden; position: relative; margin-bottom: 25px; }
 
-/* CORRECCIÓN: Inyectamos aspect-ratio y object-fit para evitar saltos verticales */
 .img-container img { 
     width: 100%; 
     aspect-ratio: 4 / 5;
@@ -208,7 +207,7 @@ h1, h2, h3, h4, h5, .brand-logo, .font-serif {
 .btn-checkout:hover { background: var(--oro-rosa-cenizo); color: var(--ciruela-oscuro); }
 
 /* =========================================
-   9. OVERLAY INMERSIVO (SHOWROOM VIP)
+   9. OVERLAY INMERSIVO (SHOWROOM VIP) - LUMINOSO
    ========================================= */
 .immersive-overlay {
     position: fixed;
@@ -216,7 +215,7 @@ h1, h2, h3, h4, h5, .brand-logo, .font-serif {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: var(--ciruela-oscuro);
+    background-color: var(--nude-seda) !important; /* Fuerza la paleta clara */
     z-index: 2000;
     opacity: 0;
     transition: opacity 0.5s ease-in-out;
@@ -233,7 +232,7 @@ h1, h2, h3, h4, h5, .brand-logo, .font-serif {
     right: 40px;
     background: none;
     border: none;
-    color: #fff;
+    color: var(--ciruela-oscuro) !important; /* Contraste con el fondo claro */
     font-size: 2.5rem;
     z-index: 2010;
     cursor: pointer;
@@ -242,14 +241,38 @@ h1, h2, h3, h4, h5, .brand-logo, .font-serif {
 
 .btn-close-immersive:hover {
     transform: rotate(90deg);
-    color: var(--oro-rosa-cenizo);
+    color: var(--oro-rosa-cenizo) !important;
 }
 
+/* Forzamos el rediseño del panel derecho para que sea luminoso */
 .immersive-details {
-    background-color: #111111; /* Contraste dramático */
-    box-shadow: -15px 0 40px rgba(0,0,0,0.6);
+    background-color: var(--nude-seda) !important; 
+    box-shadow: -15px 0 40px rgba(0,0,0,0.04) !important; /* Sombra sutil */
     z-index: 10;
     overflow-y: auto;
+}
+
+.immersive-details h2 { color: var(--ciruela-oscuro) !important; }
+.immersive-details p#immersive-story { color: rgba(44, 30, 34, 0.75) !important; }
+
+/* Tabla de especificaciones de lujo */
+.specifications-box {
+    background: rgba(255, 255, 255, 0.6) !important;
+    border: 1px solid rgba(44, 30, 34, 0.08) !important;
+}
+
+.specifications-box span.font-serif,
+#immersive-purity, #immersive-method, #immersive-size { 
+    color: var(--ciruela-oscuro) !important; 
+}
+.specifications-box span#immersive-price { 
+    color: var(--oro-rosa-cenizo) !important; 
+    font-weight: 500;
+}
+
+/* Fondo del área 3D con degradado premium */
+#immersive-3d-container {
+    background: radial-gradient(circle at center, #ffffff 0%, var(--nude-seda) 100%) !important;
 }
 
 /* Adaptación para pantallas móviles */
@@ -268,7 +291,6 @@ h1, h2, h3, h4, h5, .brand-logo, .font-serif {
         top: 15px;
         right: 20px;
         font-size: 2rem;
-        color: var(--ciruela-oscuro); /* Contraste contra el fondo claro del 3D en móvil */
     }
 }
 
