@@ -8,13 +8,11 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from supabase import create_client
 from dotenv import load_dotenv
-import uuid
-from datetime import datetime
 
 load_dotenv()
 
 app = Flask(__name__)
-# Configuración global de CORS para permitir todas las solicitudes de tu frontend
+# Configuración global de CORS
 CORS(app)
 
 # Configuración de Supabase
@@ -51,6 +49,7 @@ def enviar_certificado_html(destinatario, nombre_pieza, uuid_orden, precio_mxn):
     except Exception as e:
         print(f"❌ [SMTP ERROR CRÍTICO]: {str(e)}")
         return False
+
 
 # --- RUTAS API ---
 
@@ -104,7 +103,6 @@ def reservar_pieza():
         return jsonify({"mensaje": "Error en reserva"}), 500
 
 
-# --- NUEVA RUTA PARA EL CARRITO COMPLETO ---
 @app.route('/api/reservar-carrito', methods=['POST', 'OPTIONS'])
 def reservar_carrito():
     # Respuesta rápida para evitar bloqueos CORS en el preflight
@@ -124,7 +122,14 @@ def reservar_carrito():
         
         # Sumar los precios desde la base de datos por seguridad
         for item in items:
-            joya_id = int(item['joya_id'])
+            joya_id_raw = item.get('joya_id')
+            
+            # --- NUEVA PROTECCIÓN ANTICRASH ---
+            # Si el ID viene como diccionario (caché viejo) o está vacío, rechazamos amablemente
+            if joya_id_raw is None or isinstance(joya_id_raw, dict):
+                return jsonify({"mensaje": "Formato desactualizado. Por favor, limpia tu carrito en la web e intenta de nuevo."}), 400
+                
+            joya_id = int(joya_id_raw)
             cantidad = int(item.get('cantidad', 1))
             
             res_joya = boveda.table('joyas_stock').select('precio_centavos').eq('id', joya_id).execute()
@@ -132,8 +137,8 @@ def reservar_carrito():
                 monto_total_centavos += (res_joya.data[0]['precio_centavos'] * cantidad)
                 cantidad_total += cantidad
 
-        # Guardamos el ID de la primera joya para respetar la estructura de tu base de datos actual
-        primer_joya_id = items[0]['joya_id']
+        # Guardamos el ID de la primera joya para respetar la estructura de tu BD
+        primer_joya_id = int(items[0]['joya_id'])
 
         # Insertar orden en Supabase
         res_orden = boveda.table('ordenes_compra').insert({
@@ -201,6 +206,7 @@ def confirmar_compra():
     except Exception:
         print(f"❌ [CONFIRMAR ERROR]: {traceback.format_exc()}")
         return jsonify({"mensaje": "Error interno"}), 500
+
 
 if __name__ == '__main__':
     app.run(port=5000)
