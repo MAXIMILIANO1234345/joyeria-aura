@@ -85,32 +85,56 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
     } else if (estatusTransaccion === 'cancelada') {
-        alert("Transacción pausada. Tu pieza seguirá reservada en bóveda por los próximos 15 minutos.");
+        alert("Transacción pausada. Tu selección seguirá reservada en bóveda por los próximos 15 minutos.");
     }
 
 });
 
 
 /* =========================================================
-   4. FUNCIÓN TRANSACCIONAL GLOBAL (Invocada por index.html)
+   4. SISTEMA DE CARRITO DE COMPRAS VIP (Local Storage)
    ========================================================= */
-async function procesarPedido(idJoya) {
-    const emailCliente = prompt("Para registrar el certificado de la pieza, ingresa tu correo electrónico:");
+
+// Inicializar el carrito desde la memoria del navegador o crear uno vacío
+let carrito = JSON.parse(localStorage.getItem('carritoAura')) || [];
+
+// Función para agregar una joya al carrito (Llamada desde los botones en tu HTML)
+function agregarAlCarrito(idJoya, cantidad = 1) {
+    const itemExistente = carrito.find(item => item.joya_id === idJoya);
+    
+    if (itemExistente) {
+        itemExistente.cantidad += cantidad;
+    } else {
+        carrito.push({ joya_id: idJoya, cantidad: cantidad });
+    }
+    
+    localStorage.setItem('carritoAura', JSON.stringify(carrito));
+    alert(`¡Pieza agregada a tu reserva VIP! Tienes ${carrito.length} tipo(s) de pieza(s) en tu selección.`);
+}
+
+// Función para procesar TODO el carrito (Llamada desde el botón final de checkout)
+async function procesarCheckoutCarrito() {
+    if (carrito.length === 0) {
+        alert("Tu selección está vacía. Explora nuestro Atelier primero para añadir piezas.");
+        return;
+    }
+
+    const emailCliente = prompt("Para registrar el certificado de tus piezas, ingresa tu correo electrónico:");
     if (!emailCliente) return;
 
     const boton = document.querySelector('.btn-checkout');
     if (boton) {
-        boton.innerText = "Asegurando pieza en bóveda...";
+        boton.innerText = "Asegurando colección en bóveda...";
         boton.disabled = true;
     }
 
     const cargaUtil = {
         email: emailCliente.trim(),
-        joya_id: idJoya
+        items: carrito
     };
 
     try {
-        const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/reservar-pieza', {
+        const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/reservar-carrito', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(cargaUtil)
@@ -119,15 +143,17 @@ async function procesarPedido(idJoya) {
         const datos = await respuesta.json();
 
         if (respuesta.status === 200) {
-            alert("¡Éxito! Pieza reservada con el UUID:\n" + datos.orden_uuid + "\n\nAbriendo pasarela segura...");
+            alert("¡Éxito! Colección reservada.\n\nAbriendo pasarela segura...");
+            localStorage.removeItem('carritoAura'); // Vaciamos el carrito local
+            carrito = []; 
             window.location.href = datos.url_pasarela; 
         } else {
             alert("Aviso de Bóveda: " + (datos.mensaje || "Transacción rechazada"));
-            if (boton) { boton.innerText = "Completar el Pedido"; boton.disabled = false; }
+            if (boton) { boton.innerText = "Completar Inversión"; boton.disabled = false; }
         }
     } catch (error) {
         console.error("El backend no responde:", error);
         alert("No se pudo contactar con el taller central. Verifica que tu conexión sea estable.");
-        if (boton) { boton.innerText = "Completar el Pedido"; boton.disabled = false; }
+        if (boton) { boton.innerText = "Completar Inversión"; boton.disabled = false; }
     }
 }
