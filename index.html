@@ -33,12 +33,13 @@
                 </ul>
                 <a class="brand-logo position-absolute top-50 start-50 translate-middle" href="#">AURA</a>
                 <ul class="navbar-nav ms-auto flex-row align-items-center nav-icons">
-                    <li class="nav-item" data-bs-toggle="modal" data-bs-target="#loginModal">
-                        <i class="bi bi-person"></i>
+                    <!-- ACTUALIZADO: El ícono ahora llama a una función inteligente en vez de abrir ciegamente el modal -->
+                    <li class="nav-item" onclick="gestionarAccesoPerfil()">
+                        <i class="bi bi-person" style="cursor: pointer;"></i>
                     </li>
                     <li class="nav-item" data-bs-toggle="offcanvas" data-bs-target="#cartDrawer">
                         <i class="bi bi-bag position-relative">
-                            <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="width: 8px; height: 8px;" id="cart-indicator"></span>
+                            <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="width: 8px; height: 8px; display: none;" id="cart-indicator"></span>
                         </i>
                     </li>
                 </ul>
@@ -172,7 +173,7 @@
     </footer>
 
     <!-- ========================================================= -->
-    <!-- NUEVO LOGIN / REGISTER MODAL (Autenticación VIP 2FA)      -->
+    <!-- LOGIN / REGISTER MODAL (Autenticación VIP 2FA)            -->
     <!-- ========================================================= -->
     <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -232,6 +233,49 @@
         </div>
     </div>
 
+    <!-- ========================================================= -->
+    <!-- NUEVO: OFFCANVAS DE PERFIL DEL CLIENTE (MI BÓVEDA)        -->
+    <!-- ========================================================= -->
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="profileDrawer" aria-labelledby="profileDrawerLabel" data-bs-backdrop="true">
+        <div class="offcanvas-header border-bottom">
+            <h5 class="offcanvas-title font-serif" id="profileDrawerLabel" style="font-size: 1.5rem;">Mi Colección Privada</h5>
+            <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column p-4">
+            
+            <!-- SECCIÓN 1: DATOS DEL CLIENTE -->
+            <div class="mb-4 pb-4 border-bottom">
+                <h6 class="text-uppercase text-muted mb-3" style="letter-spacing: 2px; font-size: 0.75rem;">Datos del Coleccionista</h6>
+                <p class="mb-1 fw-bold font-serif" style="font-size: 1.2rem;" id="perfil-nombre">Cargando...</p>
+                <p class="mb-1 text-muted" style="font-size: 0.9rem;" id="perfil-email">Cargando...</p>
+                <p class="mb-0 text-muted" style="font-size: 0.9rem;" id="perfil-telefono">Cargando...</p>
+            </div>
+
+            <!-- SECCIÓN 2: COMPRAS Y PEDIDOS -->
+            <div class="mb-4 pb-4 border-bottom flex-grow-1">
+                <h6 class="text-uppercase text-muted mb-3" style="letter-spacing: 2px; font-size: 0.75rem;">Historial de Adquisiciones</h6>
+                <div id="perfil-pedidos-container" style="max-height: 250px; overflow-y: auto;">
+                    <!-- Aquí se inyectarán las compras con JS dinámicamente -->
+                    <p class="text-muted" style="font-size: 0.9rem; font-style: italic;">Aún no tienes piezas en tu bóveda.</p>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 3: SERVICIO AL CLIENTE & CERRAR SESIÓN -->
+            <div class="mt-auto">
+                <h6 class="text-uppercase text-muted mb-3" style="letter-spacing: 2px; font-size: 0.75rem;">Concierge (Servicio al Cliente)</h6>
+                <a href="#" class="btn btn-outline-dark w-100 mb-2 font-serif d-flex align-items-center justify-content-center" style="border-radius: 0; padding: 10px; text-decoration: none;">
+                    <i class="bi bi-whatsapp me-2"></i> Contactar a mi Asesor
+                </a>
+                <a href="mailto:soporte@joyeriaaura.com" class="btn btn-outline-dark w-100 mb-4 font-serif d-flex align-items-center justify-content-center" style="border-radius: 0; padding: 10px; text-decoration: none;">
+                    <i class="bi bi-envelope me-2"></i> Soporte de Bóveda
+                </a>
+                
+                <button class="btn-solid w-100" onclick="cerrarSesionVIP()" style="background-color: #333; color: white;">Cerrar Sesión</button>
+            </div>
+
+        </div>
+    </div>
+
     <!-- OFFCANVAS CARRITO -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="cartDrawer" aria-labelledby="cartDrawerLabel" data-bs-backdrop="true">
         <div class="offcanvas-header">
@@ -250,7 +294,7 @@
                     <span class="text-uppercase" style="letter-spacing: 2px; font-size: 0.85rem;">Total Estimado</span>
                     <span class="fw-medium" id="total-carrito">$ 0 MXN</span>
                 </div>
-                <!-- BOTÓN ACTUALIZADO (Ahora validará si hay sesión antes de comprar en app.js) -->
+                <!-- BOTÓN ACTUALIZADO (Valida sesión antes de comprar) -->
                 <button class="btn-checkout" onclick="procesarCheckoutCarrito()">Completar la Inversión</button>
             </div>
         </div>
