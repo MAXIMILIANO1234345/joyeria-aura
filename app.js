@@ -342,6 +342,34 @@ async function procesarCheckoutCarrito() {
         const datos = await respuesta.json();
 
         if (respuesta.status === 200) {
+            
+            // ==========================================
+            // INTEGRACIÓN GOOGLE ANALYTICS (Trafico de Pagos)
+            // ==========================================
+            
+            // 1. Calculamos los totales exactos y construimos la lista de joyas para Google
+            let totalInversion = 0;
+            let itemsAnalytics = carrito.map(item => {
+                const joya = catalogoJoyas[item.joya_id];
+                totalInversion += joya.precio * item.cantidad;
+                return {
+                    item_name: joya.nombre,
+                    price: joya.precio,
+                    quantity: item.cantidad
+                };
+            });
+
+            // 2. Disparamos el evento de compra hacia Analytics de forma segura
+            if (typeof gtag === 'function') {
+                gtag('event', 'purchase', {
+                    transaction_id: "T_" + Date.now(),
+                    value: totalInversion,
+                    currency: "MXN",
+                    items: itemsAnalytics
+                });
+            }
+            // ==========================================
+
             localStorage.removeItem('carritoAura'); 
             carrito = []; 
             actualizarUI(); 
@@ -378,7 +406,6 @@ function abrirVistaInmersiva(id) {
         cerrarVistaInmersiva();
     };
 
-    // Inyectamos la escena A-Frame. Fíjate que al modelo le ponemos el componente "drag-rotate-component".
     const container3D = document.getElementById('immersive-3d-container');
     container3D.innerHTML = `
         <a-scene embedded renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true; alpha: true" vr-mode-ui="enabled: false" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;">
