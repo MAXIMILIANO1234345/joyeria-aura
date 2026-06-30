@@ -13,7 +13,6 @@ if (typeof AFRAME !== 'undefined') {
             this.onMouseUp = this.onMouseUp.bind(this);
             this.onMouseMove = this.onMouseMove.bind(this);
 
-            // Al cargar la escena, atamos los eventos al canvas 3D
             this.el.sceneEl.addEventListener('loaded', () => {
                 const canvas = this.el.sceneEl.canvas;
                 canvas.addEventListener('mousedown', this.onMouseDown);
@@ -21,7 +20,7 @@ if (typeof AFRAME !== 'undefined') {
                 canvas.addEventListener('mousemove', this.onMouseMove);
                 canvas.addEventListener('mouseleave', this.onMouseUp);
 
-                // Soporte táctil de alta gama para móviles
+                // Mantenemos passive: false porque A-Frame maneja eventos táctiles que a veces requieren preventDefault
                 canvas.addEventListener('touchstart', this.onMouseDown, {passive: false});
                 canvas.addEventListener('touchend', this.onMouseUp);
                 canvas.addEventListener('touchmove', this.onMouseMove, {passive: false});
@@ -72,14 +71,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     /* =========================================================
-       2. STICKY SCROLL IRIS (Atelier)
+       2. STICKY SCROLL IRIS OPTIMIZADO (Sin Layout Thrashing)
        ========================================================= */
     const irisWrapper = document.querySelector('.iris-scroll-wrapper');
     const irisMask = document.querySelector('.iris-mask');
 
     if (irisWrapper && irisMask) {
         let ticking = false;
-        window.addEventListener('scroll', () => {
+
+        // Extraemos la función del scroll para poder activarla/desactivarla
+        const handleIrisScroll = () => {
             if (!ticking) {
                 window.requestAnimationFrame(() => {
                     const rect = irisWrapper.getBoundingClientRect();
@@ -102,12 +103,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 ticking = true;
             }
-        }, { passive: true });
+        };
+
+        // Solo escuchamos el evento scroll cuando el componente está visible en pantalla
+        const irisIntersectionObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                window.addEventListener('scroll', handleIrisScroll, { passive: true });
+            } else {
+                window.removeEventListener('scroll', handleIrisScroll);
+            }
+        });
+
+        irisIntersectionObserver.observe(irisWrapper);
     }
 
 
     /* =========================================================
-       3. RECEPTOR DE ADUANA VIP (Disparo de Certificado)
+       3. RECEPTOR DE ADUANA VIP
        ========================================================= */
     const parametrosURL = new URLSearchParams(window.location.search);
     const estatusTransaccion = parametrosURL.get('transaccion');
@@ -155,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
 /* =========================================================
    4. CONTROLADORES DE ALERTAS DE LUJO
    ========================================================= */
-
 function mostrarAlertaVIP(titulo, mensaje, icono = 'bi-gem') {
     document.getElementById('aura-alert-title').innerText = titulo;
     document.getElementById('aura-alert-message').innerText = mensaje;
@@ -180,7 +191,6 @@ function mostrarToastVIP(mensaje) {
 /* =========================================================
    5. SISTEMA DE CARRITO DE COMPRAS VIP
    ========================================================= */
-
 const catalogoJoyas = {
     1: { 
         nombre: "Solitario Eternidad", 
@@ -253,7 +263,7 @@ function actualizarUI() {
 
             htmlCarrito += `
                 <div class="cart-item d-flex align-items-center mb-4" style="border-bottom: 1px solid #eee; padding-bottom: 15px;">
-                    <img src="${joya.imagen}" alt="${joya.nombre}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px; margin-right: 15px;">
+                    <img src="${joya.imagen}" alt="${joya.nombre}" loading="lazy" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px; margin-right: 15px;">
                     <div class="cart-item-details flex-grow-1">
                         <h6 class="cart-item-title font-serif mb-1" style="font-size: 1.1rem;">${joya.nombre}</h6>
                         <p class="mb-1 text-muted" style="font-size: 0.8rem;">Cantidad: ${item.cantidad}</p>
@@ -342,12 +352,6 @@ async function procesarCheckoutCarrito() {
         const datos = await respuesta.json();
 
         if (respuesta.status === 200) {
-            
-            // ==========================================
-            // INTEGRACIÓN GOOGLE ANALYTICS (Trafico de Pagos)
-            // ==========================================
-            
-            // 1. Calculamos los totales exactos y construimos la lista de joyas para Google
             let totalInversion = 0;
             let itemsAnalytics = carrito.map(item => {
                 const joya = catalogoJoyas[item.joya_id];
@@ -359,7 +363,6 @@ async function procesarCheckoutCarrito() {
                 };
             });
 
-            // 2. Disparamos el evento de compra hacia Analytics de forma segura
             if (typeof gtag === 'function') {
                 gtag('event', 'purchase', {
                     transaction_id: "T_" + Date.now(),
@@ -368,7 +371,6 @@ async function procesarCheckoutCarrito() {
                     items: itemsAnalytics
                 });
             }
-            // ==========================================
 
             localStorage.removeItem('carritoAura'); 
             carrito = []; 
@@ -386,13 +388,13 @@ async function procesarCheckoutCarrito() {
 
 
 /* =========================================================
-   6. SHOWROOM INMERSIVO VIP (Luminoso y controlable)
+   6. SHOWROOM INMERSIVO VIP OPTIMIZADO (Sin inyección de DOM)
    ========================================================= */
-
 function abrirVistaInmersiva(id) {
     const joya = catalogoJoyas[id];
     if(!joya) return;
 
+    // 1. Actualizar textos de la UI
     document.getElementById('immersive-title').innerText = joya.nombre;
     document.getElementById('immersive-story').innerText = joya.historia;
     document.getElementById('immersive-purity').innerText = joya.pureza;
@@ -406,36 +408,20 @@ function abrirVistaInmersiva(id) {
         cerrarVistaInmersiva();
     };
 
-    const container3D = document.getElementById('immersive-3d-container');
-    container3D.innerHTML = `
-        <a-scene embedded renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true; alpha: true" vr-mode-ui="enabled: false" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;">
-            <a-assets>
-                <a-asset-item id="modelo-inmersivo-${id}" src="${joya.modelo}"></a-asset-item>
-            </a-assets>
-            
-            <a-light type="ambient" color="#ffffff" intensity="3"></a-light>
-            <a-light type="directional" position="2 4 2" color="#fff5e6" intensity="5" castShadow="true"></a-light>
-            <a-light type="directional" position="-3 1 -2" color="#e6f0ff" intensity="3.5"></a-light>
-            
-            <a-entity gltf-model="#modelo-inmersivo-${id}" 
-                      position="0 0 0" 
-                      rotation="${joya.rotacion}" 
-                      scale="${joya.escala}" 
-                      drag-rotate-component="speed: 2.0"
-                      class="joya-interactiva">
-            </a-entity>
-            
-            <a-entity class="lente-camara" camera position="0 0 4.5" look-controls="enabled: false" wasd-controls="enabled: false"></a-entity>
-        </a-scene>
-        
-        <div style="position: absolute; bottom: 30px; color: var(--ciruela-oscuro); font-family: var(--font-sans); letter-spacing: 2px; font-size: 0.8rem; pointer-events: none; opacity: 0.6; font-weight: 500;">
-            <i class="bi bi-arrows-move me-2"></i> HAZ CLIC Y ARRASTRA PARA INSPECCIONAR
-        </div>
-    `;
+    // 2. Modificar el modelo 3D reciclando el nodo existente, cero impacto de rendimiento
+    const modeloDinamico = document.getElementById('modelo-joya-dinamico');
+    if (modeloDinamico) {
+        modeloDinamico.setAttribute('gltf-model', `url(${joya.modelo})`);
+        modeloDinamico.setAttribute('rotation', joya.rotacion);
+        modeloDinamico.setAttribute('scale', joya.escala);
+    }
+
+    // 3. Mostrar la escena y el overlay
+    const escenaInmersiva = document.getElementById('escena-inmersiva');
+    if (escenaInmersiva) escenaInmersiva.style.display = 'block';
 
     const overlay = document.getElementById('immersive-product-view');
     overlay.style.display = 'block';
-    
     document.body.style.overflow = 'hidden';
 
     setTimeout(() => {
@@ -449,7 +435,11 @@ function cerrarVistaInmersiva() {
     
     setTimeout(() => {
         overlay.style.display = 'none';
-        document.getElementById('immersive-3d-container').innerHTML = ''; 
+        
+        // Ocultar la escena en lugar de destruirla
+        const escenaInmersiva = document.getElementById('escena-inmersiva');
+        if (escenaInmersiva) escenaInmersiva.style.display = 'none';
+        
         document.body.style.overflow = 'auto';
     }, 500); 
 }
@@ -458,7 +448,6 @@ function cerrarVistaInmersiva() {
 /* =========================================================
    7. SISTEMA DE AUTENTICACIÓN (Login / Registro + 2FA)
    ========================================================= */
-
 let correoTemporal = ""; 
 
 function mostrarSeccion(seccion) {
@@ -612,7 +601,6 @@ function reiniciarModalLogin() {
 /* =========================================================
    8. MI BÓVEDA (Gestión del Panel de Perfil y Descarga de PDF)
    ========================================================= */
-
 function gestionarAccesoPerfil() {
     const usuarioActivo = localStorage.getItem('auraVIP_User');
     
