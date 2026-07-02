@@ -701,11 +701,14 @@ function seleccionarYGuiar(idJoya) {
     // 4. Toast de confirmación guiada
     mostrarToastVIP("Excelente elección. Hemos reservado tu pieza en tu bolsa.");
 }
-
-// Para que aparezca al cargar la página
-window.addEventListener('load', () => {
-    setTimeout(() => {
+document.addEventListener("DOMContentLoaded", () => {
+    // Comprueba si el modal ya se mostró antes
+    if (!localStorage.getItem("welcomeModalShown")) {
+        // Si no se ha mostrado, inicializa y muestra el modal
         const welcomeModal = new bootstrap.Modal(document.getElementById('welcomeGuideModal'));
         welcomeModal.show();
-    }, 1500); // Aparece 1.5 segundos después de que cargue la página
+        
+        // Guarda en la memoria del navegador que ya se mostró
+        localStorage.setItem("welcomeModalShown", "true");
+    }
 });

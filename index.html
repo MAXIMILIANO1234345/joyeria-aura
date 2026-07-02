@@ -285,21 +285,25 @@
         </div>
     </div>
 <!-- MODAL DE ELECCIÓN GUIADA -->
-<div class="modal fade" id="welcomeGuideModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+<!-- MODAL DE ELECCIÓN GUIADA -->
+<div class="modal fade" id="welcomeGuideModal" tabindex="-1" aria-hidden="true"> <!-- Se quitó data-bs-backdrop="static" -->
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content luxury-modal" style="text-align: center; padding: 40px;">
+        <div class="modal-content luxury-modal" style="text-align: center; padding: 40px; position: relative;">
+            <!-- Botón para cerrar el modal -->
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; top: 15px; right: 15px;"></button>
+            
             <h2 class="font-serif mb-3">Bienvenido a AURA</h2>
             <p class="text-muted mb-4">Para comenzar tu experiencia, elige la pieza que mejor define tu estilo hoy. Te guiaremos en cada paso.</p>
             
             <div class="row">
                 <div class="col-md-4">
-                    <button class="btn btn-outline-dark w-100 mb-2" onclick="seleccionarYGuiar(1)">Solitario Eternidad</button>
+                    <button class="btn btn-outline-dark w-100 mb-2" onclick="seleccionarYGuiar(1)" data-bs-dismiss="modal">Solitario Eternidad</button>
                 </div>
                 <div class="col-md-4">
-                    <button class="btn btn-outline-dark w-100 mb-2" onclick="seleccionarYGuiar(2)">Crossover Lumina</button>
+                    <button class="btn btn-outline-dark w-100 mb-2" onclick="seleccionarYGuiar(2)" data-bs-dismiss="modal">Crossover Lumina</button>
                 </div>
                 <div class="col-md-4">
-                    <button class="btn btn-outline-dark w-100 mb-2" onclick="seleccionarYGuiar(3)">Esencia Pura</button>
+                    <button class="btn btn-outline-dark w-100 mb-2" onclick="seleccionarYGuiar(3)" data-bs-dismiss="modal">Esencia Pura</button>
                 </div>
             </div>
         </div>
