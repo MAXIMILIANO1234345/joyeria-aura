@@ -26,16 +26,17 @@
                     <li class="nav-item"><a class="nav-link-custom" href="#atelier">El Atelier</a></li>
                 </ul>
                 <a class="brand-logo position-absolute top-50 start-50 translate-middle" href="#">AURA</a>
-                <ul class="navbar-nav ms-auto flex-row align-items-center nav-icons">
-                    <li class="nav-item" onclick="gestionarAccesoPerfil()">
-                        <i class="bi bi-person" style="cursor: pointer;"></i>
-                    </li>
-                    <li class="nav-item" data-bs-toggle="offcanvas" data-bs-target="#cartDrawer">
-                        <i class="bi bi-bag position-relative" style="cursor: pointer;">
-                            <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="width: 8px; height: 8px; display: none;" id="cart-indicator"></span>
-                        </i>
-                    </li>
-                </ul>
+              <ul class="navbar-nav ms-auto flex-row align-items-center nav-icons">
+    <li class="nav-item me-3" onclick="gestionarAccesoPerfil()" style="cursor: pointer; border: 1px solid rgba(0,0,0,0.1); padding: 5px 15px; border-radius: 30px; transition: all 0.3s;">
+        <i class="bi bi-person me-2"></i><span style="font-size: 0.85rem; font-family: var(--font-sans); font-weight: 500;">Mi Cuenta</span>
+    </li>
+    <li class="nav-item" data-bs-toggle="offcanvas" data-bs-target="#cartDrawer" style="cursor: pointer; background-color: var(--ciruela-oscuro); color: white; padding: 5px 15px; border-radius: 30px;">
+        <i class="bi bi-bag me-2 position-relative">
+            <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="width: 10px; height: 10px; display: none;" id="cart-indicator"></span>
+        </i>
+        <span style="font-size: 0.85rem; font-family: var(--font-sans); font-weight: 500;">Bolsa</span>
+    </li>
+</ul>
             </div>
         </div>
     </nav>
@@ -226,22 +227,25 @@
     </div>
 
     <div class="offcanvas offcanvas-end" tabindex="-1" id="cartDrawer" aria-labelledby="cartDrawerLabel" data-bs-backdrop="true">
-        <div class="offcanvas-header border-bottom">
-            <h5 class="offcanvas-title font-serif" id="cartDrawerLabel" style="font-size: 1.5rem;">Bolsa de Compras</h5>
+        <div class="offcanvas-header border-bottom bg-light">
+            <h5 class="offcanvas-title font-serif" id="cartDrawerLabel" style="font-size: 1.5rem;">Paso 1: Tu Selección</h5>
             <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body d-flex flex-column p-4">
             <div id="contenedor-carrito" class="flex-grow-1 mb-4" style="overflow-y: auto;">
                 <div class="text-center mt-5">
-                    <p class="text-muted font-serif" style="font-size: 1.2rem; font-style: italic;">Tu reserva está vacía.</p>
+                    <i class="bi bi-bag-x mb-3" style="font-size: 3rem; color: #ccc;"></i>
+                    <p class="text-muted font-serif" style="font-size: 1.2rem;">Tu bolsa está vacía.</p>
+                    <button class="btn-outline-dark btn mt-2" data-bs-dismiss="offcanvas">Ver joyas disponibles</button>
                 </div>
             </div>
             <div class="mt-auto pt-4 border-top">
                 <div class="d-flex justify-content-between mb-3">
-                    <span class="text-uppercase text-muted" style="letter-spacing: 2px; font-size: 0.8rem;">Total Estimado</span>
+                    <span class="text-uppercase text-muted" style="letter-spacing: 2px; font-size: 0.8rem;">Total a Pagar</span>
                     <span class="fw-bold font-serif" style="font-size: 1.2rem;" id="total-carrito">$ 0 MXN</span>
                 </div>
-                <button type="button" class="btn-solid w-100 btn-checkout" onclick="procesarCheckoutCarrito()" style="padding: 12px; font-size: 0.9rem;">Proceder al Pago</button>
+                <p style="font-size: 0.75rem; color: #888; text-align: center; margin-bottom: 10px;">🔒 Pago 100% seguro y encriptado</p>
+                <button type="button" class="btn-solid w-100 btn-checkout" onclick="procesarCheckoutCarrito()" style="padding: 15px; font-size: 1rem; font-weight: bold;">Paso 2: Pagar ahora <i class="bi bi-arrow-right ms-2"></i></button>
             </div>
         </div>
     </div>
