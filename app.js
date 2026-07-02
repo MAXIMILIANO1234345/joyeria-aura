@@ -686,3 +686,26 @@ function cerrarSesionVIP() {
     
     mostrarToastVIP("🔒 Bóveda cerrada. Hasta pronto.");
 }
+
+function seleccionarYGuiar(idJoya) {
+    // 1. Añadimos al carrito automáticamente
+    agregarAlCarrito(idJoya);
+    
+    // 2. Cerramos el modal de bienvenida
+    const modal = bootstrap.Modal.getInstance(document.getElementById('welcomeGuideModal'));
+    modal.hide();
+    
+    // 3. Hacemos scroll suave a la galería
+    document.getElementById('galeria').scrollIntoView({ behavior: 'smooth' });
+    
+    // 4. Toast de confirmación guiada
+    mostrarToastVIP("Excelente elección. Hemos reservado tu pieza en tu bolsa.");
+}
+
+// Para que aparezca al cargar la página
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        const welcomeModal = new bootstrap.Modal(document.getElementById('welcomeGuideModal'));
+        welcomeModal.show();
+    }, 1500); // Aparece 1.5 segundos después de que cargue la página
+});
