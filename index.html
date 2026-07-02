@@ -31,7 +31,7 @@
                         <i class="bi bi-person" style="cursor: pointer;"></i>
                     </li>
                     <li class="nav-item" data-bs-toggle="offcanvas" data-bs-target="#cartDrawer">
-                        <i class="bi bi-bag position-relative">
+                        <i class="bi bi-bag position-relative" style="cursor: pointer;">
                             <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="width: 8px; height: 8px; display: none;" id="cart-indicator"></span>
                         </i>
                     </li>
@@ -59,14 +59,13 @@
             <div class="col-md-4 reveal text-center product-card">
                 <div class="img-container" style="position: relative; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.03); aspect-ratio: 4/5; overflow: hidden;">
                     <div style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20;"></div>
-                    <a-scene embedded renderer="antialias: true; colorManagement: true; alpha: true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false" style="width: 100%; height: 100%;">
+                    <a-scene embedded renderer="antialias: true; colorManagement: true; alpha: true" vr-mode-ui="enabled: false" style="width: 100%; height: 100%;">
                         <a-assets>
                             <a-asset-item id="modelo-1" src="anillo_mariposa.glb"></a-asset-item>
                         </a-assets>
                         <a-light type="ambient" color="#ffffff" intensity="1.5"></a-light>
                         <a-light type="directional" position="2 4 2" color="#fff5e6" intensity="2.5"></a-light>
                         <a-light type="directional" position="-3 1 -2" color="#e6f0ff" intensity="1.0"></a-light>
-                        
                         <a-entity gltf-model="#modelo-1" position="0 0 0" rotation="15 -20 10" scale="2.5 2.5 2.5"></a-entity>
                         <a-entity class="rig-camara" position="0 0 0" rotation="10 0 0">
                             <a-entity class="lente-camara" camera position="-4 0 3" look-controls="enabled: false" wasd-controls="enabled: false"></a-entity>
@@ -81,14 +80,11 @@
             <div class="col-md-4 reveal text-center product-card" style="transition-delay: 0.2s; margin-top: 50px;">
                 <div class="img-container" style="position: relative; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.03); aspect-ratio: 4/5; overflow: hidden;">
                     <div style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20;"></div>
-                    <a-scene embedded renderer="antialias: true; colorManagement: true; alpha: true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false" style="width: 100%; height: 100%;">
-                        <a-assets>
-                            <a-asset-item id="modelo-2" src="anillo.glb"></a-asset-item>
-                        </a-assets>
+                    <a-scene embedded renderer="antialias: true; colorManagement: true; alpha: true" vr-mode-ui="enabled: false" style="width: 100%; height: 100%;">
+                        <a-assets><a-asset-item id="modelo-2" src="anillo.glb"></a-asset-item></a-assets>
                         <a-light type="ambient" color="#ffffff" intensity="1.5"></a-light>
                         <a-light type="directional" position="2 4 2" color="#fff5e6" intensity="2.5"></a-light>
                         <a-light type="directional" position="-3 1 -2" color="#e6f0ff" intensity="1.0"></a-light>
-                        
                         <a-entity gltf-model="#modelo-2" position="0 0 0" rotation="15 -20 10" scale="1 1 1"></a-entity>
                         <a-entity class="rig-camara" position="0 0 0" rotation="10 0 0">
                             <a-entity class="lente-camara" camera position="0 0 5.0" look-controls="enabled: false" wasd-controls="enabled: false"></a-entity>
@@ -103,14 +99,11 @@
             <div class="col-md-4 reveal text-center product-card" style="transition-delay: 0.4s;">
                 <div class="img-container" style="position: relative; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.03); aspect-ratio: 4/5; overflow: hidden;">
                     <div style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20;"></div>
-                    <a-scene embedded renderer="antialias: true; colorManagement: true; alpha: true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false" style="width: 100%; height: 100%;">
-                        <a-assets>
-                            <a-asset-item id="modelo-3" src="metaretail_anillo_panthere.glb"></a-asset-item>
-                        </a-assets>
+                    <a-scene embedded renderer="antialias: true; colorManagement: true; alpha: true" vr-mode-ui="enabled: false" style="width: 100%; height: 100%;">
+                        <a-assets><a-asset-item id="modelo-3" src="metaretail_anillo_panthere.glb"></a-asset-item></a-assets>
                         <a-light type="ambient" color="#ffffff" intensity="1.5"></a-light>
                         <a-light type="directional" position="2 4 2" color="#fff5e6" intensity="2.5"></a-light>
                         <a-light type="directional" position="-3 1 -2" color="#e6f0ff" intensity="1.0"></a-light>
-                        
                         <a-entity gltf-model="#modelo-3" position="0 0 0" rotation="15 -20 10" scale="1 1 1"></a-entity>
                         <a-entity class="rig-camara" position="0 0 0" rotation="10 0 0">
                             <a-entity class="lente-camara" camera position="0 0 5.0" look-controls="enabled: false" wasd-controls="enabled: false"></a-entity>
@@ -231,6 +224,25 @@
         </div>
     </div>
 
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="cartDrawer" aria-labelledby="cartDrawerLabel" data-bs-backdrop="true">
+        <div class="offcanvas-header border-bottom">
+            <h5 class="offcanvas-title font-serif" id="cartDrawerLabel" style="font-size: 1.5rem;">Bolsa de Compras</h5>
+            <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column p-4">
+            <div id="cart-items-container" class="flex-grow-1 mb-4" style="overflow-y: auto;">
+                <p class="text-muted" style="font-size: 0.9rem; font-style: italic;">Tu bolsa está vacía.</p>
+            </div>
+            <div class="mt-auto pt-4 border-top">
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="text-uppercase text-muted" style="letter-spacing: 2px; font-size: 0.8rem;">Total Estimado</span>
+                    <span class="fw-bold font-serif" style="font-size: 1.2rem;" id="cart-total">$ 0 MXN</span>
+                </div>
+                <button type="button" class="btn-solid w-100" id="btn-checkout" style="padding: 12px; font-size: 0.9rem;">Proceder al Pago</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="auraAlertModal" tabindex="-1" aria-hidden="true" style="z-index: 1090;">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content luxury-modal" style="border: 1px solid var(--oro-rosa-cenizo); text-align: center;">
@@ -262,7 +274,6 @@
     
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            // 1. Intersection Observer para pausar/reproducir escenas
             const scenes = document.querySelectorAll('a-scene');
             
             const observerOptions = {
@@ -275,9 +286,9 @@
                 entries.forEach(entry => {
                     const scene = entry.target;
                     if (entry.isIntersecting) {
-                        scene.play(); // Inicia el renderizado
+                        scene.play(); 
                     } else {
-                        scene.pause(); // Congela el renderizado
+                        scene.pause(); 
                     }
                 });
             }, observerOptions);
@@ -290,7 +301,6 @@
                 }
             });
 
-            // 2. Director de Cámara Optimizado
             const tomas = [
                 { rotacion: "10 0 0",   distancia: "0 0 5.0" },
                 { rotacion: "20 45 0",  distancia: "0 0 4.5" },
@@ -303,7 +313,6 @@
                 tomaActual = (tomaActual + 1) % tomas.length;
                 const toma = tomas[tomaActual];
                 
-                // Solo afecta a las escenas activas (en pantalla)
                 const activeRigs = document.querySelectorAll('a-scene:not(.a-hidden) .rig-camara');
                 const activeLentes = document.querySelectorAll('a-scene:not(.a-hidden) .lente-camara');
                 
