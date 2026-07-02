@@ -221,6 +221,7 @@
                     <p class="text-muted" style="font-size: 0.9rem; font-style: italic;">Aún no tienes piezas en tu bóveda.</p>
                 </div>
             </div>
+            <button class="btn btn-outline-danger mt-3 w-100" onclick="cerrarSesionVIP()">Cerrar Bóveda</button>
         </div>
     </div>
 
@@ -230,15 +231,17 @@
             <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body d-flex flex-column p-4">
-            <div id="cart-items-container" class="flex-grow-1 mb-4" style="overflow-y: auto;">
-                <p class="text-muted" style="font-size: 0.9rem; font-style: italic;">Tu bolsa está vacía.</p>
+            <div id="contenedor-carrito" class="flex-grow-1 mb-4" style="overflow-y: auto;">
+                <div class="text-center mt-5">
+                    <p class="text-muted font-serif" style="font-size: 1.2rem; font-style: italic;">Tu reserva está vacía.</p>
+                </div>
             </div>
             <div class="mt-auto pt-4 border-top">
                 <div class="d-flex justify-content-between mb-3">
                     <span class="text-uppercase text-muted" style="letter-spacing: 2px; font-size: 0.8rem;">Total Estimado</span>
-                    <span class="fw-bold font-serif" style="font-size: 1.2rem;" id="cart-total">$ 0 MXN</span>
+                    <span class="fw-bold font-serif" style="font-size: 1.2rem;" id="total-carrito">$ 0 MXN</span>
                 </div>
-                <button type="button" class="btn-solid w-100" id="btn-checkout" style="padding: 12px; font-size: 0.9rem;">Proceder al Pago</button>
+                <button type="button" class="btn-solid w-100 btn-checkout" onclick="procesarCheckoutCarrito()" style="padding: 12px; font-size: 0.9rem;">Proceder al Pago</button>
             </div>
         </div>
     </div>
