@@ -1,688 +1,328 @@
-/* =========================================================
-   0. MOTOR DE FÍSICAS CUSTOM PARA A-FRAME (Interacción VIP)
-   ========================================================= */
-if (typeof AFRAME !== 'undefined') {
-    AFRAME.registerComponent('drag-rotate-component', {
-        schema: { speed: { default: 1.5 } },
-        init: function () {
-            this.ifMouseDown = false;
-            this.x_cord = 0;
-            this.y_cord = 0;
-
-            this.onMouseDown = this.onMouseDown.bind(this);
-            this.onMouseUp = this.onMouseUp.bind(this);
-            this.onMouseMove = this.onMouseMove.bind(this);
-
-            this.el.sceneEl.addEventListener('loaded', () => {
-                const canvas = this.el.sceneEl.canvas;
-                canvas.addEventListener('mousedown', this.onMouseDown);
-                canvas.addEventListener('mouseup', this.onMouseUp);
-                canvas.addEventListener('mousemove', this.onMouseMove);
-                canvas.addEventListener('mouseleave', this.onMouseUp);
-
-                // Mantenemos passive: false porque A-Frame maneja eventos táctiles que a veces requieren preventDefault
-                canvas.addEventListener('touchstart', this.onMouseDown, {passive: false});
-                canvas.addEventListener('touchend', this.onMouseUp);
-                canvas.addEventListener('touchmove', this.onMouseMove, {passive: false});
-            });
-        },
-        onMouseDown: function (event) {
-            this.ifMouseDown = true;
-            this.x_cord = event.clientX || (event.touches ? event.touches[0].clientX : 0);
-            this.y_cord = event.clientY || (event.touches ? event.touches[0].clientY : 0);
-        },
-        onMouseUp: function () {
-            this.ifMouseDown = false;
-        },
-        onMouseMove: function (event) {
-            if (this.ifMouseDown) {
-                let temp_x = event.clientX || (event.touches ? event.touches[0].clientX : 0);
-                let temp_y = event.clientY || (event.touches ? event.touches[0].clientY : 0);
-                let x_temp = temp_x - this.x_cord;
-                let y_temp = temp_y - this.y_cord;
-
-                this.el.object3D.rotation.y += x_temp * this.data.speed / 100;
-                this.el.object3D.rotation.x += y_temp * this.data.speed / 100;
-
-                this.x_cord = temp_x;
-                this.y_cord = temp_y;
-            }
-        }
-    });
-}
-
-
-document.addEventListener('DOMContentLoaded', () => {
-
-    /* =========================================================
-       1. SCROLL REVEAL (Galería)
-       ========================================================= */
-    const reveals = document.querySelectorAll('.reveal');
-    const revealObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('active');
-                observer.unobserve(entry.target); 
-            }
-        });
-    }, { threshold: 0.15, rootMargin: "0px 0px -50px 0px" });
-
-    reveals.forEach(reveal => revealObserver.observe(reveal));
-
-
-    /* =========================================================
-       2. STICKY SCROLL IRIS OPTIMIZADO (Sin Layout Thrashing)
-       ========================================================= */
-    const irisWrapper = document.querySelector('.iris-scroll-wrapper');
-    const irisMask = document.querySelector('.iris-mask');
-
-    if (irisWrapper && irisMask) {
-        let ticking = false;
-
-        // Extraemos la función del scroll para poder activarla/desactivarla
-        const handleIrisScroll = () => {
-            if (!ticking) {
-                window.requestAnimationFrame(() => {
-                    const rect = irisWrapper.getBoundingClientRect();
-                    let progress = 0;
-                    
-                    if (rect.top <= 0) {
-                        progress = Math.abs(rect.top) / (rect.height - window.innerHeight);
-                    }
-                    progress = Math.max(0, Math.min(1, progress));
-
-                    if (progress > 0 && progress < 1) {
-                        irisMask.classList.add('is-opening');
-                    } else {
-                        irisMask.classList.remove('is-opening');
-                    }
-
-                    const circleSize = progress * 150; 
-                    irisMask.style.clipPath = `circle(${circleSize}% at 50% 50%)`;
-                    ticking = false;
-                });
-                ticking = true;
-            }
-        };
-
-        // Solo escuchamos el evento scroll cuando el componente está visible en pantalla
-        const irisIntersectionObserver = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting) {
-                window.addEventListener('scroll', handleIrisScroll, { passive: true });
-            } else {
-                window.removeEventListener('scroll', handleIrisScroll);
-            }
-        });
-
-        irisIntersectionObserver.observe(irisWrapper);
-    }
-
-
-    /* =========================================================
-       3. RECEPTOR DE ADUANA VIP
-       ========================================================= */
-    const parametrosURL = new URLSearchParams(window.location.search);
-    const estatusTransaccion = parametrosURL.get('transaccion');
-    const ordenUuid = parametrosURL.get('orden_uuid');
-
-    if (estatusTransaccion === 'aprobada' && ordenUuid) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-
-        mostrarAlertaVIP(
-            "Inversión Asegurada", 
-            "Tu adquisición ha sido capturada por la Bóveda Central. Estamos generando tu Recibo de Transacción y tu Certificado de Autenticidad...",
-            "bi-shield-check"
-        );
-
-        fetch('https://joyeria-aura-42ax.onrender.com/api/confirmar-compra', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orden_uuid: ordenUuid })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.estatus === 'CONFIRMADO' && data.correo_enviado) {
-                setTimeout(() => {
-                    mostrarToastVIP(`✉️ Recibo y Certificado digital despachados a tu correo electrónico.`);
-                }, 3000); 
-            } else if (data.estatus === 'YA_PROCESADO') {
-                mostrarToastVIP("Aviso: " + data.mensaje);
-            } else {
-                mostrarToastVIP("⚠️ El pago está asegurado, pero hubo una demora al entregar los documentos digitales.");
-            }
-        })
-        .catch(err => {
-            console.error("Error al certificar:", err);
-            mostrarToastVIP("Tu pago fue procesado, pero no pudimos emitir los recibos digitales.");
-        });
-
-    } else if (estatusTransaccion === 'cancelada') {
-        mostrarToastVIP("Transacción pausada. Tu selección seguirá reservada en bóveda.");
-    }
-
-    actualizarUI();
-});
-
-
-/* =========================================================
-   4. CONTROLADORES DE ALERTAS DE LUJO
-   ========================================================= */
-function mostrarAlertaVIP(titulo, mensaje, icono = 'bi-gem') {
-    document.getElementById('aura-alert-title').innerText = titulo;
-    document.getElementById('aura-alert-message').innerText = mensaje;
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AURA | Alta Joyería</title>
     
-    const iconElement = document.getElementById('aura-alert-icon');
-    iconElement.className = `bi ${icono} mb-2 mt-3`;
-    iconElement.style.fontSize = '2.5rem';
-    iconElement.style.color = 'var(--oro-rosa-cenizo)';
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg fixed-top navbar-glass animate-on-load">
+        <div class="container-fluid px-5">
+            <div class="d-flex align-items-center w-100">
+                <ul class="navbar-nav me-auto flex-row d-none d-lg-flex">
+                    <li class="nav-item"><a class="nav-link-custom" href="#galeria">Colecciones</a></li>
+                    <li class="nav-item"><a class="nav-link-custom" href="#atelier">El Atelier</a></li>
+                </ul>
+                <a class="brand-logo position-absolute top-50 start-50 translate-middle" href="#">AURA</a>
+                <ul class="navbar-nav ms-auto flex-row align-items-center nav-icons">
+                    <li class="nav-item" onclick="gestionarAccesoPerfil()">
+                        <i class="bi bi-person" style="cursor: pointer;"></i>
+                    </li>
+                    <li class="nav-item" data-bs-toggle="offcanvas" data-bs-target="#cartDrawer">
+                        <i class="bi bi-bag position-relative" style="cursor: pointer;">
+                            <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="width: 8px; height: 8px; display: none;" id="cart-indicator"></span>
+                        </i>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-    const alertModal = new bootstrap.Modal(document.getElementById('auraAlertModal'));
-    alertModal.show();
-}
+    <header class="hero-container">
+        <div class="hero-text">
+            <h1 class="animate-on-load">Poder <span>Absoluto</span></h1>
+            <p class="mb-5 animate-on-load delay-1" style="max-width: 450px; font-weight: 300; line-height: 1.6;">Forjado en platino, diseñado para la eternidad. Descubre piezas que capturan la luz y dictan sus propias reglas.</p>
+            <div class="animate-on-load delay-2">
+                <a href="#galeria" class="btn-premium">Explorar la Colección</a>
+            </div>
+        </div>
+        <div class="hero-img-box animate-on-load delay-2 d-none d-lg-flex">
+            <img src="Gemini_Generated_Image_zfe1guzfe1guzfe1.png" alt="Anillo" class="img-mimetic" onerror="this.src='https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=600&auto=format&fit=crop'">
+        </div>
+    </header>
 
-function mostrarToastVIP(mensaje) {
-    document.getElementById('aura-toast-message').innerText = mensaje;
-    const toastEl = document.getElementById('auraToast');
-    const toast = new bootstrap.Toast(toastEl, { delay: 4500 });
-    toast.show();
-}
-
-
-/* =========================================================
-   5. SISTEMA DE CARRITO DE COMPRAS VIP
-   ========================================================= */
-const catalogoJoyas = {
-    1: { 
-        nombre: "Solitario Eternidad", 
-        precio: 24500, 
-        imagen: "https://images.unsplash.com/photo-1605100804763-247f67b2548e?q=80&w=200&auto=format&fit=crop",
-        modelo: "anillo_mariposa.glb",
-        escala: "2.5 2.5 2.5",
-        rotacion: "15 -20 10",
-        pureza: "Platino 950 / Diamante VVS1",
-        metodo: "Forjado y Engastado a mano",
-        talla: "Hecho a la medida",
-        historia: "Una pieza que trasciende el tiempo. El Solitario Eternidad no es solo un anillo, es una declaración de intenciones. Su diamante central, meticulosamente seleccionado por nuestros gemólogos por su asombrosa claridad, captura cada destello de luz, reflejando una promesa inquebrantable."
-    },
-    2: { 
-        nombre: "Crossover Lumina", 
-        precio: 16800, 
-        imagen: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=200&auto=format&fit=crop",
-        modelo: "anillo.glb",
-        escala: "1.2 1.2 1.2",
-        rotacion: "15 -20 10",
-        pureza: "Oro Blanco 18K / Zafiro",
-        metodo: "Fundición a la cera perdida",
-        talla: "Hecho a la medida",
-        historia: "La convergencia perfecta entre la modernidad y el clasicismo. Sus líneas entrelazadas representan caminos que se unen. Forjado en oro blanco de 18 quilates, su estructura arquitectónica abraza sutilmente las gemas, creando un halo de luz que hipnotiza desde cualquier ángulo."
-    },
-    3: { 
-        nombre: "Esencia Pura", 
-        precio: 3200, 
-        imagen: "https://images.unsplash.com/photo-1599643478524-fb66f7ca265b?q=80&w=200&auto=format&fit=crop",
-        modelo: "metaretail_anillo_panthere.glb",
-        escala: "1 1 1",
-        rotacion: "15 -20 10",
-        pureza: "Plata .925 con Baño de Rodio",
-        metodo: "Pulido Espejo Artesanal",
-        talla: "Ajustable (5-9 US)",
-        historia: "La belleza en su expresión más minimalista. 'Esencia Pura' desafía la gravedad con un diseño continuo que fluye orgánicamente. Su acabado en rodio le otorga una resistencia extrema y un brillo platinado que la convierte en la compañera diaria perfecta para una elegancia silenciosa."
-    }
-};
-
-let carritoCrudo = JSON.parse(localStorage.getItem('carritoAura')) || [];
-let carrito = carritoCrudo.filter(item => item.joya_id !== null && typeof item.joya_id !== 'object');
-
-if (carritoCrudo.length !== carrito.length) {
-    localStorage.setItem('carritoAura', JSON.stringify(carrito));
-    console.warn("AURA: Se limpió información obsoleta del carrito.");
-}
-
-function actualizarUI() {
-    const contenedor = document.getElementById('contenedor-carrito');
-    const totalElement = document.getElementById('total-carrito');
-    const indicador = document.getElementById('cart-indicator');
-
-    if (carrito.length === 0) {
-        contenedor.innerHTML = `<div class="text-center mt-5"><p class="text-muted font-serif" style="font-size: 1.2rem; font-style: italic;">Tu reserva está vacía.</p></div>`;
-        totalElement.innerText = "$ 0 MXN";
-        indicador.style.display = 'none';
-        return;
-    }
-
-    let htmlCarrito = '';
-    let total = 0;
-    let cantidadTotalPiezas = 0;
-
-    carrito.forEach((item, index) => {
-        const joya = catalogoJoyas[item.joya_id];
-        if (joya) {
-            const subtotal = joya.precio * item.cantidad;
-            total += subtotal;
-            cantidadTotalPiezas += item.cantidad;
-
-            htmlCarrito += `
-                <div class="cart-item d-flex align-items-center mb-4" style="border-bottom: 1px solid #eee; padding-bottom: 15px;">
-                    <img src="${joya.imagen}" alt="${joya.nombre}" loading="lazy" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px; margin-right: 15px;">
-                    <div class="cart-item-details flex-grow-1">
-                        <h6 class="cart-item-title font-serif mb-1" style="font-size: 1.1rem;">${joya.nombre}</h6>
-                        <p class="mb-1 text-muted" style="font-size: 0.8rem;">Cantidad: ${item.cantidad}</p>
-                        <p class="fw-medium mb-0" style="font-size: 0.9rem;">$ ${subtotal.toLocaleString()} MXN</p>
-                    </div>
-                    <button class="btn btn-sm" onclick="eliminarDelCarrito(${index})" style="background: none; border: none; color: var(--ciruela-oscuro); font-size: 1.2rem;">
-                        <i class="bi bi-x-circle"></i>
-                    </button>
+    <section id="galeria" class="container editorial-section">
+        <h2 class="text-center mb-5 font-serif reveal" style="font-size: 3rem;">Nuevas Adquisiciones</h2>
+        <div class="row g-5">
+            <div class="col-md-4 reveal text-center product-card">
+                <div class="img-container" style="position: relative; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.03); aspect-ratio: 4/5; overflow: hidden;">
+                    <div style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20;"></div>
+                    <a-scene embedded renderer="antialias: true; colorManagement: true; alpha: true" vr-mode-ui="enabled: false" style="width: 100%; height: 100%;">
+                        <a-assets>
+                            <a-asset-item id="modelo-1" src="anillo_mariposa.glb"></a-asset-item>
+                        </a-assets>
+                        <a-light type="ambient" color="#ffffff" intensity="1.5"></a-light>
+                        <a-light type="directional" position="2 4 2" color="#fff5e6" intensity="2.5"></a-light>
+                        <a-light type="directional" position="-3 1 -2" color="#e6f0ff" intensity="1.0"></a-light>
+                        <a-entity gltf-model="#modelo-1" position="0 0 0" rotation="15 -20 10" scale="2.5 2.5 2.5"></a-entity>
+                        <a-entity class="rig-camara" position="0 0 0" rotation="10 0 0">
+                            <a-entity class="lente-camara" camera position="-4 0 3" look-controls="enabled: false" wasd-controls="enabled: false"></a-entity>
+                        </a-entity>
+                    </a-scene>
                 </div>
-            `;
-        }
-    });
+                <h4 class="font-serif mt-4">Solitario Eternidad</h4>
+                <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 2px;">$ 24,500 MXN</p>
+                <button class="btn-premium mt-3" onclick="agregarAlCarrito(1)" style="padding: 10px 20px; font-size: 0.7rem;">Añadir al Carrito</button>
+            </div>
 
-    contenedor.innerHTML = htmlCarrito;
-    totalElement.innerText = `$ ${total.toLocaleString()} MXN`;
+            <div class="col-md-4 reveal text-center product-card" style="transition-delay: 0.2s; margin-top: 50px;">
+                <div class="img-container" style="position: relative; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.03); aspect-ratio: 4/5; overflow: hidden;">
+                    <div style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20;"></div>
+                    <a-scene embedded renderer="antialias: true; colorManagement: true; alpha: true" vr-mode-ui="enabled: false" style="width: 100%; height: 100%;">
+                        <a-assets><a-asset-item id="modelo-2" src="anillo.glb"></a-asset-item></a-assets>
+                        <a-light type="ambient" color="#ffffff" intensity="1.5"></a-light>
+                        <a-light type="directional" position="2 4 2" color="#fff5e6" intensity="2.5"></a-light>
+                        <a-light type="directional" position="-3 1 -2" color="#e6f0ff" intensity="1.0"></a-light>
+                        <a-entity gltf-model="#modelo-2" position="0 0 0" rotation="15 -20 10" scale="1 1 1"></a-entity>
+                        <a-entity class="rig-camara" position="0 0 0" rotation="10 0 0">
+                            <a-entity class="lente-camara" camera position="0 0 5.0" look-controls="enabled: false" wasd-controls="enabled: false"></a-entity>
+                        </a-entity>
+                    </a-scene>
+                </div>
+                <h4 class="font-serif mt-4">Crossover Lumina</h4>
+                <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 2px;">$ 16,800 MXN</p>
+                <button class="btn-premium mt-3" onclick="agregarAlCarrito(2)" style="padding: 10px 20px; font-size: 0.7rem;">Añadir al Carrito</button>
+            </div>
+
+            <div class="col-md-4 reveal text-center product-card" style="transition-delay: 0.4s;">
+                <div class="img-container" style="position: relative; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.03); aspect-ratio: 4/5; overflow: hidden;">
+                    <div style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20;"></div>
+                    <a-scene embedded renderer="antialias: true; colorManagement: true; alpha: true" vr-mode-ui="enabled: false" style="width: 100%; height: 100%;">
+                        <a-assets><a-asset-item id="modelo-3" src="metaretail_anillo_panthere.glb"></a-asset-item></a-assets>
+                        <a-light type="ambient" color="#ffffff" intensity="1.5"></a-light>
+                        <a-light type="directional" position="2 4 2" color="#fff5e6" intensity="2.5"></a-light>
+                        <a-light type="directional" position="-3 1 -2" color="#e6f0ff" intensity="1.0"></a-light>
+                        <a-entity gltf-model="#modelo-3" position="0 0 0" rotation="15 -20 10" scale="1 1 1"></a-entity>
+                        <a-entity class="rig-camara" position="0 0 0" rotation="10 0 0">
+                            <a-entity class="lente-camara" camera position="0 0 5.0" look-controls="enabled: false" wasd-controls="enabled: false"></a-entity>
+                        </a-entity>
+                    </a-scene>
+                </div>
+                <h4 class="font-serif mt-4">Esencia Pura</h4>
+                <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 2px;">$ 3,200 MXN</p>
+                <button class="btn-premium mt-3" onclick="agregarAlCarrito(3)" style="padding: 10px 20px; font-size: 0.7rem;">Añadir al Carrito</button>
+            </div>
+        </div>
+    </section>
+
+    <div class="iris-scroll-wrapper" id="atelier">
+        <div class="iris-sticky-container">
+            <div class="text-center" style="position: absolute; z-index: 0;">
+                <p style="font-family: var(--font-serif); font-size: 1.5rem; color: #aaa; letter-spacing: 4px;">Sigue bajando para descubrir</p>
+            </div>
+            <div class="iris-mask">
+                <div class="container" style="padding: 0 5%;">
+                    <div class="row align-items-center">
+                        <div class="col-lg-5">
+                            <h2 style="font-size: 4.5rem; margin-bottom: 30px; line-height: 0.9; font-family: var(--font-serif);">
+                                El Arte de<br><span style="color: var(--oro-rosa-cenizo); font-style: italic;">Forjar.</span>
+                            </h2>
+                            <p style="font-weight: 300; line-height: 1.8; color: #ccc; margin-bottom: 40px; font-family: var(--font-sans);">
+                                No ensamblamos, esculpimos. Trabajamos exclusivamente con Oro de 18 quilates éticamente extraído y Platino 950 de pureza absoluta. Cada diamante es seleccionado a mano por nuestros gemólogos, asegurando un grado de claridad que desafía la luz.
+                            </p>
+                            <a href="#" style="color: var(--oro-rosa-cenizo); letter-spacing: 4px; text-transform: uppercase; font-size: 0.8rem; text-decoration: none; border-bottom: 1px solid var(--oro-rosa-cenizo); padding-bottom: 5px;">Conoce nuestro manifiesto</a>
+                        </div>
+                        <div class="col-lg-6 offset-lg-1">
+                            <div style="width: 100%; height: 550px; background: url('https://images.unsplash.com/photo-1589128777073-263566ae5e4d?q=80&w=1000&auto=format&fit=crop') center/cover; filter: grayscale(30%) contrast(1.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer style="background-color: var(--ciruela-oscuro); color: #fff; padding: 60px 0 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <div class="container text-center">
+            <h2 class="font-serif mb-4" style="letter-spacing: 6px;">AURA</h2>
+            <p style="font-size: 0.8rem; letter-spacing: 2px; color: #888; text-transform: uppercase;">Ciudad de México • París • Milán</p>
+        </div>
+    </footer>
+
+    <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content luxury-modal">
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close" onclick="reiniciarModalLogin()"></button>
+                </div>
+                <div class="modal-body text-center pt-0 px-4 pb-4">
+                    <h2 class="font-serif mb-2" style="font-size: 2.2rem;">Bóveda AURA</h2>
+                    <p class="text-muted mb-4" style="font-size: 0.85rem;" id="auth-subtitle">Accede a tu colección privada.</p>
+                    
+                    <div class="d-flex justify-content-center mb-4" id="auth-toggle-btns">
+                        <button class="btn btn-outline-dark mx-1 fw-bold" id="tab-login" onclick="mostrarSeccion('login')">Iniciar Sesión</button>
+                        <button class="btn btn-outline-dark mx-1 text-muted border-0" id="tab-registro" onclick="mostrarSeccion('registro')">Crear Cuenta</button>
+                    </div>
+
+                    <div id="auth-login-form">
+                        <div class="mb-3 text-start">
+                            <input type="email" id="login-email" class="form-control form-luxury" placeholder="Correo Electrónico">
+                        </div>
+                        <div class="mb-4 text-start">
+                            <input type="password" id="login-password" class="form-control form-luxury" placeholder="Contraseña">
+                        </div>
+                        <button type="button" class="btn-solid" id="btn-login" onclick="procesarLogin()">Entrar</button>
+                    </div>
+
+                    <div id="auth-registro-form" style="display: none;">
+                        <div class="mb-3 text-start">
+                            <input type="text" id="reg-usuario" class="form-control form-luxury" placeholder="Nombre de Usuario">
+                        </div>
+                        <div class="mb-3 text-start">
+                            <input type="tel" id="reg-telefono" class="form-control form-luxury" placeholder="Número de Teléfono">
+                        </div>
+                        <div class="mb-3 text-start">
+                            <input type="email" id="reg-email" class="form-control form-luxury" placeholder="Correo Electrónico">
+                        </div>
+                        <div class="mb-4 text-start">
+                            <input type="password" id="reg-password" class="form-control form-luxury" placeholder="Crear Contraseña">
+                        </div>
+                        <button type="button" class="btn-solid" id="btn-registro" onclick="procesarRegistro()">Registrarse</button>
+                    </div>
+
+                    <div id="auth-paso-2" style="display: none;">
+                        <div class="mb-4 text-start">
+                            <input type="text" id="auth-codigo-input" class="form-control form-luxury text-center" placeholder="Token de 6 dígitos" maxlength="6" style="letter-spacing: 5px; font-size: 1.2rem;">
+                        </div>
+                        <button type="button" class="btn-solid" id="btn-verificar-codigo" onclick="verificarCodigoAcceso()">Verificar Token</button>
+                        <p class="mt-4" style="font-size: 0.8rem;"><a href="#" onclick="reiniciarModalLogin()" style="color: var(--oro-rosa-cenizo); text-decoration: none;">Cancelar</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="profileDrawer" aria-labelledby="profileDrawerLabel" data-bs-backdrop="true">
+        <div class="offcanvas-header border-bottom">
+            <h5 class="offcanvas-title font-serif" id="profileDrawerLabel" style="font-size: 1.5rem;">Mi Colección Privada</h5>
+            <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column p-4">
+            <div class="mb-4 pb-4 border-bottom">
+                <h6 class="text-uppercase text-muted mb-3" style="letter-spacing: 2px; font-size: 0.75rem;">Datos del Coleccionista</h6>
+                <p class="mb-1 fw-bold font-serif" style="font-size: 1.2rem;" id="perfil-nombre">Cargando...</p>
+                <p class="mb-1 text-muted" style="font-size: 0.9rem;" id="perfil-email">Cargando...</p>
+                <p class="mb-0 text-muted" style="font-size: 0.9rem;" id="perfil-telefono">Cargando...</p>
+            </div>
+            <div class="mb-4 pb-4 border-bottom flex-grow-1">
+                <h6 class="text-uppercase text-muted mb-3" style="letter-spacing: 2px; font-size: 0.75rem;">Adquisiciones y Certificados</h6>
+                <div id="perfil-pedidos-container" style="max-height: 250px; overflow-y: auto;">
+                    <p class="text-muted" style="font-size: 0.9rem; font-style: italic;">Aún no tienes piezas en tu bóveda.</p>
+                </div>
+            </div>
+            <button class="btn btn-outline-danger mt-3 w-100" onclick="cerrarSesionVIP()">Cerrar Bóveda</button>
+        </div>
+    </div>
+
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="cartDrawer" aria-labelledby="cartDrawerLabel" data-bs-backdrop="true">
+        <div class="offcanvas-header border-bottom">
+            <h5 class="offcanvas-title font-serif" id="cartDrawerLabel" style="font-size: 1.5rem;">Bolsa de Compras</h5>
+            <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column p-4">
+            <div id="contenedor-carrito" class="flex-grow-1 mb-4" style="overflow-y: auto;">
+                <div class="text-center mt-5">
+                    <p class="text-muted font-serif" style="font-size: 1.2rem; font-style: italic;">Tu reserva está vacía.</p>
+                </div>
+            </div>
+            <div class="mt-auto pt-4 border-top">
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="text-uppercase text-muted" style="letter-spacing: 2px; font-size: 0.8rem;">Total Estimado</span>
+                    <span class="fw-bold font-serif" style="font-size: 1.2rem;" id="total-carrito">$ 0 MXN</span>
+                </div>
+                <button type="button" class="btn-solid w-100 btn-checkout" onclick="procesarCheckoutCarrito()" style="padding: 12px; font-size: 0.9rem;">Proceder al Pago</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="auraAlertModal" tabindex="-1" aria-hidden="true" style="z-index: 1090;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content luxury-modal" style="border: 1px solid var(--oro-rosa-cenizo); text-align: center;">
+                <div class="modal-header border-0 pb-0 justify-content-center" style="position: relative;">
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 15px; top: 15px;"></button>
+                    <i class="bi bi-gem mb-2 mt-3" id="aura-alert-icon" style="font-size: 2rem; color: var(--oro-rosa-cenizo);"></i>
+                </div>
+                <div class="modal-body px-5 pb-5 pt-2">
+                    <h3 class="font-serif mb-3" id="aura-alert-title" style="font-size: 1.8rem;">Aviso de Bóveda</h3>
+                    <p class="text-muted" id="aura-alert-message" style="font-size: 0.95rem; line-height: 1.6; font-family: var(--font-sans);"></p>
+                    <button type="button" class="btn-solid mt-4" data-bs-dismiss="modal" id="aura-alert-btn">Entendido</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-4" style="z-index: 1095;">
+        <div id="auraToast" class="toast align-items-center border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true" style="background-color: var(--ciruela-oscuro); color: white;">
+            <div class="d-flex">
+                <div class="toast-body font-serif" id="aura-toast-message" style="font-size: 1.1rem; letter-spacing: 1px;">
+                    Notificación AURA.
+                </div>
+                <button type="button" class="btn-close btn-close-white me-3 m-auto shadow-none" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
-    indicador.innerText = cantidadTotalPiezas;
-    indicador.style.display = 'flex';
-    indicador.style.alignItems = 'center';
-    indicador.style.justifyContent = 'center';
-    indicador.style.fontSize = '9px';
-    indicador.style.color = 'white';
-}
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const scenes = document.querySelectorAll('a-scene');
+            
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.1 
+            };
 
-function agregarAlCarrito(idJoya, cantidad = 1) {
-    const itemExistente = carrito.find(item => item.joya_id === idJoya);
-    if (itemExistente) {
-        itemExistente.cantidad += cantidad;
-    } else {
-        carrito.push({ joya_id: idJoya, cantidad: cantidad });
-    }
-    
-    localStorage.setItem('carritoAura', JSON.stringify(carrito));
-    actualizarUI();
-    
-    const cartOffcanvas = new bootstrap.Offcanvas(document.getElementById('cartDrawer'));
-    cartOffcanvas.show();
-    
-    mostrarToastVIP("💎 Pieza añadida a tu selección.");
-}
+            const sceneObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const scene = entry.target;
+                    if (entry.isIntersecting) {
+                        scene.play(); 
+                    } else {
+                        scene.pause(); 
+                    }
+                });
+            }, observerOptions);
 
-function eliminarDelCarrito(index) {
-    carrito.splice(index, 1);
-    localStorage.setItem('carritoAura', JSON.stringify(carrito));
-    actualizarUI(); 
-}
-
-async function procesarCheckoutCarrito() {
-    if (carrito.length === 0) {
-        mostrarToastVIP("Tu selección está vacía. Explora nuestro Atelier primero.");
-        return;
-    }
-
-    const usuarioActivo = localStorage.getItem('auraVIP_User');
-    if (!usuarioActivo) {
-        mostrarAlertaVIP(
-            "Autenticación Requerida", 
-            "Por protocolos de seguridad, es obligatorio iniciar sesión en nuestra bóveda antes de procesar una inversión.",
-            "bi-shield-lock"
-        );
-        
-        const cartElement = document.getElementById('cartDrawer');
-        const cartOffcanvas = bootstrap.Offcanvas.getInstance(cartElement);
-        if (cartOffcanvas) cartOffcanvas.hide();
-        
-        setTimeout(() => {
-            const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-            loginModal.show();
-        }, 500);
-        return;
-    }
-
-    const boton = document.querySelector('.btn-checkout');
-    if (boton) {
-        boton.innerText = "Asegurando colección...";
-        boton.disabled = true;
-    }
-
-    try {
-        const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/reservar-carrito', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: usuarioActivo, items: carrito })
-        });
-
-        const datos = await respuesta.json();
-
-        if (respuesta.status === 200) {
-            let totalInversion = 0;
-            let itemsAnalytics = carrito.map(item => {
-                const joya = catalogoJoyas[item.joya_id];
-                totalInversion += joya.precio * item.cantidad;
-                return {
-                    item_name: joya.nombre,
-                    price: joya.precio,
-                    quantity: item.cantidad
-                };
+            scenes.forEach(scene => {
+                if (scene.hasLoaded) {
+                    sceneObserver.observe(scene);
+                } else {
+                    scene.addEventListener('loaded', () => sceneObserver.observe(scene));
+                }
             });
 
-            if (typeof gtag === 'function') {
-                gtag('event', 'purchase', {
-                    transaction_id: "T_" + Date.now(),
-                    value: totalInversion,
-                    currency: "MXN",
-                    items: itemsAnalytics
-                });
-            }
+            const tomas = [
+                { rotacion: "10 0 0",   distancia: "0 0 5.0" },
+                { rotacion: "20 45 0",  distancia: "0 0 4.5" },
+                { rotacion: "40 -30 0", distancia: "0 0 4.8" },
+                { rotacion: "-5 -15 0", distancia: "0 0 5.2" }
+            ];
+            let tomaActual = 0;
 
-            localStorage.removeItem('carritoAura'); 
-            carrito = []; 
-            actualizarUI(); 
-            window.location.href = datos.url_pasarela; 
-        } else {
-            mostrarAlertaVIP("Transacción Declinada", datos.mensaje || "Hubo un error en la bóveda.", "bi-x-circle");
-            if (boton) { boton.innerText = "Completar la Inversión"; boton.disabled = false; }
-        }
-    } catch (error) {
-        mostrarToastVIP("Error: No se pudo contactar con el taller central.");
-        if (boton) { boton.innerText = "Completar la Inversión"; boton.disabled = false; }
-    }
-}
-
-
-/* =========================================================
-   6. SHOWROOM INMERSIVO VIP OPTIMIZADO (Sin inyección de DOM)
-   ========================================================= */
-function abrirVistaInmersiva(id) {
-    const joya = catalogoJoyas[id];
-    if(!joya) return;
-
-    // 1. Actualizar textos de la UI
-    document.getElementById('immersive-title').innerText = joya.nombre;
-    document.getElementById('immersive-story').innerText = joya.historia;
-    document.getElementById('immersive-purity').innerText = joya.pureza;
-    document.getElementById('immersive-method').innerText = joya.metodo;
-    document.getElementById('immersive-size').innerText = joya.talla;
-    document.getElementById('immersive-price').innerText = `$ ${joya.precio.toLocaleString()} MXN`;
-
-    const btnAdd = document.getElementById('btn-immersive-add');
-    btnAdd.onclick = () => {
-        agregarAlCarrito(id);
-        cerrarVistaInmersiva();
-    };
-
-    // 2. Modificar el modelo 3D reciclando el nodo existente, cero impacto de rendimiento
-    const modeloDinamico = document.getElementById('modelo-joya-dinamico');
-    if (modeloDinamico) {
-        modeloDinamico.setAttribute('gltf-model', `url(${joya.modelo})`);
-        modeloDinamico.setAttribute('rotation', joya.rotacion);
-        modeloDinamico.setAttribute('scale', joya.escala);
-    }
-
-    // 3. Mostrar la escena y el overlay
-    const escenaInmersiva = document.getElementById('escena-inmersiva');
-    if (escenaInmersiva) escenaInmersiva.style.display = 'block';
-
-    const overlay = document.getElementById('immersive-product-view');
-    overlay.style.display = 'block';
-    document.body.style.overflow = 'hidden';
-
-    setTimeout(() => {
-        overlay.classList.add('active');
-    }, 10);
-}
-
-function cerrarVistaInmersiva() {
-    const overlay = document.getElementById('immersive-product-view');
-    overlay.classList.remove('active');
-    
-    setTimeout(() => {
-        overlay.style.display = 'none';
-        
-        // Ocultar la escena en lugar de destruirla
-        const escenaInmersiva = document.getElementById('escena-inmersiva');
-        if (escenaInmersiva) escenaInmersiva.style.display = 'none';
-        
-        document.body.style.overflow = 'auto';
-    }, 500); 
-}
-
-
-/* =========================================================
-   7. SISTEMA DE AUTENTICACIÓN (Login / Registro + 2FA)
-   ========================================================= */
-let correoTemporal = ""; 
-
-function mostrarSeccion(seccion) {
-    const isLogin = seccion === 'login';
-    document.getElementById('auth-login-form').style.display = isLogin ? 'block' : 'none';
-    document.getElementById('auth-registro-form').style.display = isLogin ? 'none' : 'block';
-    
-    document.getElementById('tab-login').className = isLogin ? "btn btn-outline-dark mx-1 fw-bold" : "btn btn-outline-dark mx-1 text-muted border-0";
-    document.getElementById('tab-registro').className = !isLogin ? "btn btn-outline-dark mx-1 fw-bold" : "btn btn-outline-dark mx-1 text-muted border-0";
-    document.getElementById('auth-subtitle').innerText = isLogin ? "Accede a tu colección privada." : "Únete al círculo exclusivo de coleccionistas.";
-}
-
-async function procesarRegistro() {
-    const usuario = document.getElementById('reg-usuario').value.trim();
-    const telefono = document.getElementById('reg-telefono').value.trim();
-    const email = document.getElementById('reg-email').value.trim();
-    const password = document.getElementById('reg-password').value.trim();
-    const btn = document.getElementById('btn-registro');
-
-    if (!usuario || !telefono || !email.includes('@') || password.length < 4) {
-        mostrarToastVIP("Por favor, llena todos los campos correctamente.");
-        return;
-    }
-
-    btn.innerText = "Creando cuenta..."; btn.disabled = true;
-
-    try {
-        const res = await fetch('https://joyeria-aura-42ax.onrender.com/api/crear-cuenta', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ usuario, telefono, email, password })
+            setInterval(() => {
+                tomaActual = (tomaActual + 1) % tomas.length;
+                const toma = tomas[tomaActual];
+                
+                const activeRigs = document.querySelectorAll('a-scene:not(.a-hidden) .rig-camara');
+                const activeLentes = document.querySelectorAll('a-scene:not(.a-hidden) .lente-camara');
+                
+                activeRigs.forEach(rig => rig.setAttribute('rotation', toma.rotacion));
+                activeLentes.forEach(lente => lente.setAttribute('position', toma.distancia));
+            }, 5000);
         });
-        const data = await res.json();
-
-        if (res.status === 200) {
-            correoTemporal = email;
-            transicionA2FA("Hemos enviado un token de verificación a tu correo.");
-            mostrarToastVIP("✉️ Token enviado con éxito.");
-        } else {
-            mostrarToastVIP("Aviso: " + data.mensaje);
-        }
-    } catch (error) {
-        mostrarToastVIP("Error de conexión con la bóveda.");
-    } finally {
-        btn.innerText = "Registrarse"; btn.disabled = false;
-    }
-}
-
-async function procesarLogin() {
-    const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value.trim();
-    const btn = document.getElementById('btn-login');
-
-    if (!email.includes('@') || !password) {
-        mostrarToastVIP("Por favor, ingresa tu correo y contraseña.");
-        return;
-    }
-
-    btn.innerText = "Verificando..."; btn.disabled = true;
-
-    try {
-        const res = await fetch('https://joyeria-aura-42ax.onrender.com/api/iniciar-sesion', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
-        const data = await res.json();
-
-        if (res.status === 200) {
-            correoTemporal = email;
-            transicionA2FA("Seguridad de Bóveda: Ingresa el token enviado a tu correo para acceder.");
-            mostrarToastVIP("✉️ Token de seguridad enviado.");
-        } else {
-            mostrarToastVIP(data.mensaje);
-        }
-    } catch (error) {
-        mostrarToastVIP("Error de conexión.");
-    } finally {
-        btn.innerText = "Entrar"; btn.disabled = false;
-    }
-}
-
-function transicionA2FA(mensaje) {
-    document.getElementById('auth-toggle-btns').style.display = 'none';
-    document.getElementById('auth-login-form').style.display = 'none';
-    document.getElementById('auth-registro-form').style.display = 'none';
-    document.getElementById('auth-paso-2').style.display = 'block';
-    document.getElementById('auth-subtitle').innerText = mensaje;
-}
-
-async function verificarCodigoAcceso() {
-    const codigo = document.getElementById('auth-codigo-input').value.trim();
-    const btn = document.getElementById('btn-verificar-codigo');
-
-    if (codigo.length < 5) {
-        mostrarToastVIP("Ingresa el token completo.");
-        return;
-    }
-
-    btn.innerText = "Validando..."; btn.disabled = true;
-
-    try {
-        const res = await fetch('https://joyeria-aura-42ax.onrender.com/api/verificar-codigo', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: correoTemporal, codigo })
-        });
-        const data = await res.json();
-
-        if (res.status === 200) {
-            localStorage.setItem('auraVIP_User', data.email); 
-            
-            const modalInstance = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
-            if (modalInstance) modalInstance.hide();
-            
-            mostrarAlertaVIP(
-                "Acceso Concedido", 
-                `Bienvenido de vuelta a tu colección privada, ${data.usuario || data.email}.`, 
-                "bi-unlock"
-            );
-            
-            reiniciarModalLogin();
-            gestionarAccesoPerfil(); 
-        } else {
-            mostrarToastVIP("Error: " + data.mensaje);
-        }
-    } catch (error) {
-        mostrarToastVIP("Error de conexión.");
-    } finally {
-        btn.innerText = "Verificar Token"; btn.disabled = false;
-    }
-}
-
-function reiniciarModalLogin() {
-    document.getElementById('auth-toggle-btns').style.display = 'flex';
-    document.getElementById('auth-paso-2').style.display = 'none';
-    mostrarSeccion('login'); 
-    
-    document.getElementById('auth-codigo-input').value = "";
-    document.getElementById('login-email').value = "";
-    document.getElementById('login-password').value = "";
-    document.getElementById('reg-usuario').value = "";
-    document.getElementById('reg-telefono').value = "";
-    document.getElementById('reg-email').value = "";
-    document.getElementById('reg-password').value = "";
-    
-    correoTemporal = "";
-}
-
-
-/* =========================================================
-   8. MI BÓVEDA (Gestión del Panel de Perfil y Descarga de PDF)
-   ========================================================= */
-function gestionarAccesoPerfil() {
-    const usuarioActivo = localStorage.getItem('auraVIP_User');
-    
-    if (!usuarioActivo) {
-        const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-        loginModal.show();
-    } else {
-        const profileOffcanvas = new bootstrap.Offcanvas(document.getElementById('profileDrawer'));
-        profileOffcanvas.show();
-        cargarDatosPerfil(usuarioActivo);
-    }
-}
-
-async function cargarDatosPerfil(emailUsuario) {
-    document.getElementById('perfil-email').innerText = emailUsuario;
-    document.getElementById('perfil-nombre').innerText = "Cargando datos...";
-    document.getElementById('perfil-telefono').innerText = "Cargando...";
-    document.getElementById('perfil-pedidos-container').innerHTML = '<p class="text-muted" style="font-size: 0.9rem; font-style: italic;">Conectando con la bóveda central...</p>';
-
-    try {
-        const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/perfil-usuario', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: emailUsuario })
-        });
-
-        if (respuesta.status === 200) {
-            const datos = await respuesta.json();
-            document.getElementById('perfil-nombre').innerText = datos.usuario || "Coleccionista VIP";
-            document.getElementById('perfil-telefono').innerText = datos.telefono || "Teléfono no registrado";
-            
-            const contenedorPedidos = document.getElementById('perfil-pedidos-container');
-            
-            if (datos.pedidos && datos.pedidos.length > 0) {
-                let htmlPedidos = '';
-                datos.pedidos.forEach(pedido => {
-                    
-                    let botonDescarga = '';
-                    if (pedido.estado === 'PAGADO') {
-                        botonDescarga = `
-                        <div class="mt-2 text-end">
-                            <a href="https://joyeria-aura-42ax.onrender.com/api/descargar-certificado/${pedido.id_orden}" 
-                               target="_blank"
-                               class="btn btn-sm" 
-                               style="font-size: 0.75rem; letter-spacing: 1px; color: var(--oro-rosa-cenizo); border: 1px solid var(--oro-rosa-cenizo); border-radius: 4px; text-decoration: none; padding: 4px 10px; transition: all 0.3s ease;">
-                               <i class="bi bi-file-earmark-pdf me-1"></i> Obtener Certificado
-                            </a>
-                        </div>`;
-                    }
-
-                    htmlPedidos += `
-                        <div class="mb-3 p-3" style="background-color: #fcfcfc; border-radius: 8px; border-left: 3px solid var(--oro-rosa-cenizo); box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
-                            <p class="mb-1 fw-bold font-serif" style="font-size: 1rem;">${pedido.nombre_joya}</p>
-                            <p class="mb-1 text-muted" style="font-size: 0.8rem;">Folio: ${pedido.id_orden.substring(0,8)}...</p>
-                            <p class="mb-1 text-muted" style="font-size: 0.8rem;">Fecha: ${new Date(pedido.fecha).toLocaleDateString()}</p>
-                            <span class="badge ${pedido.estado === 'PAGADO' ? 'bg-success' : 'bg-warning text-dark'}" style="font-size: 0.7rem; letter-spacing: 1px;">
-                                ${pedido.estado === 'PAGADO' ? 'ASEGURADO' : 'PENDIENTE DE PAGO'}
-                            </span>
-                            ${botonDescarga}
-                        </div>
-                    `;
-                });
-                contenedorPedidos.innerHTML = htmlPedidos;
-            } else {
-                contenedorPedidos.innerHTML = '<p class="text-muted" style="font-size: 0.9rem; font-style: italic;">Aún no tienes piezas en tu bóveda.</p>';
-            }
-        } else {
-            document.getElementById('perfil-nombre').innerText = "Error de conexión";
-            document.getElementById('perfil-pedidos-container').innerHTML = '<p class="text-danger" style="font-size: 0.9rem;">No pudimos sincronizar tu perfil.</p>';
-        }
-    } catch (error) {
-        document.getElementById('perfil-nombre').innerText = "Modo Sin Conexión";
-        document.getElementById('perfil-pedidos-container').innerHTML = '<p class="text-muted" style="font-size: 0.9rem;">Revisa tu conexión a internet.</p>';
-    }
-}
-
-function cerrarSesionVIP() {
-    localStorage.removeItem('auraVIP_User');
-    
-    const profileElement = document.getElementById('profileDrawer');
-    const profileOffcanvas = bootstrap.Offcanvas.getInstance(profileElement);
-    if(profileOffcanvas) profileOffcanvas.hide();
-    
-    mostrarToastVIP("🔒 Bóveda cerrada. Hasta pronto.");
-}
+    </script>
+</body>
+</html>
