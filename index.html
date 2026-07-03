@@ -62,69 +62,311 @@
         </div>
     </header>
 
-    <section id="galeria" class="container editorial-section">
-        <h2 class="text-center mb-5 font-serif reveal" style="font-size: 3rem;">Nuevas Adquisiciones</h2>
-        <div class="row g-5">
-            <div class="col-md-4 reveal text-center product-card">
-                <div class="img-container" style="position: relative; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.03); aspect-ratio: 4/5; overflow: hidden;">
-                    <div style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20;"></div>
-                    <a-scene embedded renderer="antialias: true; colorManagement: true; alpha: true" vr-mode-ui="enabled: false" style="width: 100%; height: 100%;">
-                        <a-assets>
-                            <a-asset-item id="modelo-1" src="anillo_mariposa.glb"></a-asset-item>
-                        </a-assets>
-                        <a-light type="ambient" color="#ffffff" intensity="1.5"></a-light>
-                        <a-light type="directional" position="2 4 2" color="#fff5e6" intensity="2.5"></a-light>
-                        <a-light type="directional" position="-3 1 -2" color="#e6f0ff" intensity="1.0"></a-light>
-                        <a-entity gltf-model="#modelo-1" position="0 0 0" rotation="15 -20 10" scale="2.5 2.5 2.5"></a-entity>
-                        <a-entity class="rig-camara" position="0 0 0" rotation="10 0 0">
-                            <a-entity class="lente-camara" camera position="-4 0 3" look-controls="enabled: false" wasd-controls="enabled: false"></a-entity>
-                        </a-entity>
-                    </a-scene>
-                </div>
-                <h4 class="font-serif mt-4">Solitario Eternidad</h4>
-                <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 2px;">$ 24,500 MXN</p>
-                <button class="btn-premium mt-3" onclick="agregarAlCarrito(1)" style="padding: 10px 20px; font-size: 0.7rem;">Añadir al Carrito</button>
-            </div>
+    
+<section id="galeria" class="py-5 editorial-section">
+        <div class="container">
+            <h2 class="text-center mb-5 font-serif reveal" style="font-size: 3rem;">Colecciones AURA</h2>
+            
+            <ul class="nav nav-tabs justify-content-center border-0 mb-5" id="catalogoTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active text-dark font-weight-bold fs-5 border-0 bg-transparent" id="anillos-tab" data-bs-toggle="tab" data-bs-target="#anillos" type="button" role="tab">Anillos</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link text-dark fs-5 border-0 bg-transparent" id="collares-tab" data-bs-toggle="tab" data-bs-target="#collares" type="button" role="tab">Collares</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link text-dark fs-5 border-0 bg-transparent" id="pulseras-tab" data-bs-toggle="tab" data-bs-target="#pulseras" type="button" role="tab">Pulseras</button>
+                </li>
+            </ul>
 
-            <div class="col-md-4 reveal text-center product-card" style="transition-delay: 0.2s; margin-top: 50px;">
-                <div class="img-container" style="position: relative; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.03); aspect-ratio: 4/5; overflow: hidden;">
-                    <div style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20;"></div>
-                    <a-scene embedded renderer="antialias: true; colorManagement: true; alpha: true" vr-mode-ui="enabled: false" style="width: 100%; height: 100%;">
-                        <a-assets><a-asset-item id="modelo-2" src="anillo.glb"></a-asset-item></a-assets>
-                        <a-light type="ambient" color="#ffffff" intensity="1.5"></a-light>
-                        <a-light type="directional" position="2 4 2" color="#fff5e6" intensity="2.5"></a-light>
-                        <a-light type="directional" position="-3 1 -2" color="#e6f0ff" intensity="1.0"></a-light>
-                        <a-entity gltf-model="#modelo-2" position="0 0 0" rotation="15 -20 10" scale="1 1 1"></a-entity>
-                        <a-entity class="rig-camara" position="0 0 0" rotation="10 0 0">
-                            <a-entity class="lente-camara" camera position="0 0 5.0" look-controls="enabled: false" wasd-controls="enabled: false"></a-entity>
-                        </a-entity>
-                    </a-scene>
+            <div class="tab-content" id="catalogoTabsContent">
+                
+                <div class="tab-pane fade show active" id="anillos" role="tabpanel" tabindex="0">
+                    <div class="row g-4">
+                        <div class="col-lg-3 col-md-4 col-sm-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="anillo_1_render.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763-247f6612148e?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Solitario Eternidad" loading="lazy" style="height: 200px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Solitario Eternidad</h5>
+                                    <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 1px;">$ 24,500 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('anillo.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(1)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-4 col-sm-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="51fYehgEMcL._AC_SY500_.jpg" class="card-img-top mx-auto" alt="Crossover Lumina" loading="lazy" style="height: 200px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Crossover Lumina</h5>
+                                    <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 1px;">$ 16,800 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('anillo.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(2)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-4 col-sm-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="Gemini_Generated_Image_zfe1guzfe1guzfe1.png" class="card-img-top mx-auto" alt="Esencia Pura" loading="lazy" style="height: 200px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Esencia Pura</h5>
+                                    <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 1px;">$ 3,200 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('metaretail_anillo_panthere.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(3)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-4 col-sm-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="anillo_4.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763-247f6612148e?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Mariposa de Cristal" loading="lazy" style="height: 200px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Mariposa Cristal</h5>
+                                    <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 1px;">$ 12,400 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('anillo_mariposa.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(4)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-4 col-sm-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="anillo_5.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763-247f6612148e?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Aura Imperial" loading="lazy" style="height: 200px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Aura Imperial</h5>
+                                    <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 1px;">$ 35,000 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('anillo.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(5)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-4 col-sm-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="anillo_6.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763-247f6612148e?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Zafiro Noche" loading="lazy" style="height: 200px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Zafiro Noche</h5>
+                                    <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 1px;">$ 28,900 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('anillo.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(6)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-4 col-sm-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="anillo_7.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763-247f6612148e?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Alianza Platino" loading="lazy" style="height: 200px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Alianza Platino</h5>
+                                    <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 1px;">$ 19,500 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('anillo.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(7)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-4 col-sm-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="anillo_8.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763-247f6612148e?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Rosa Eterna" loading="lazy" style="height: 200px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Rosa Eterna</h5>
+                                    <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 1px;">$ 21,000 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('metaretail_anillo_panthere.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(8)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <h4 class="font-serif mt-4">Crossover Lumina</h4>
-                <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 2px;">$ 16,800 MXN</p>
-                <button class="btn-premium mt-3" onclick="agregarAlCarrito(2)" style="padding: 10px 20px; font-size: 0.7rem;">Añadir al Carrito</button>
-            </div>
 
-            <div class="col-md-4 reveal text-center product-card" style="transition-delay: 0.4s;">
-                <div class="img-container" style="position: relative; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.03); aspect-ratio: 4/5; overflow: hidden;">
-                    <div style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:20;"></div>
-                    <a-scene embedded renderer="antialias: true; colorManagement: true; alpha: true" vr-mode-ui="enabled: false" style="width: 100%; height: 100%;">
-                        <a-assets><a-asset-item id="modelo-3" src="metaretail_anillo_panthere.glb"></a-asset-item></a-assets>
-                        <a-light type="ambient" color="#ffffff" intensity="1.5"></a-light>
-                        <a-light type="directional" position="2 4 2" color="#fff5e6" intensity="2.5"></a-light>
-                        <a-light type="directional" position="-3 1 -2" color="#e6f0ff" intensity="1.0"></a-light>
-                        <a-entity gltf-model="#modelo-3" position="0 0 0" rotation="15 -20 10" scale="1 1 1"></a-entity>
-                        <a-entity class="rig-camara" position="0 0 0" rotation="10 0 0">
-                            <a-entity class="lente-camara" camera position="0 0 5.0" look-controls="enabled: false" wasd-controls="enabled: false"></a-entity>
-                        </a-entity>
-                    </a-scene>
+                <div class="tab-pane fade" id="collares" role="tabpanel" tabindex="0">
+                    <div class="row g-4">
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="collar_1.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524-fb506469a46f?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Gargantilla Zafiro" loading="lazy" style="height: 220px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Gargantilla Zafiro</h5>
+                                    <p class="text-muted">$ 45,000 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('collar_zafiro.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(9)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="collar_2.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524-fb506469a46f?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Colgante Lágrima" loading="lazy" style="height: 220px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Colgante Lágrima</h5>
+                                    <p class="text-muted">$ 32,500 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('collar_lagrima.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(10)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="collar_3.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524-fb506469a46f?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Cadena Veneciana" loading="lazy" style="height: 220px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Cadena Veneciana Oro</h5>
+                                    <p class="text-muted">$ 18,900 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('cadena_oro.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(11)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="collar_4.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524-fb506469a46f?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Perla del Mar" loading="lazy" style="height: 220px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Perla de Tahití</h5>
+                                    <p class="text-muted">$ 27,000 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('collar_perla.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(12)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="collar_5.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524-fb506469a46f?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Cruz de Diamantes" loading="lazy" style="height: 220px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Cruz de Diamantes</h5>
+                                    <p class="text-muted">$ 55,000 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('cruz_diamante.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(13)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="collar_6.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524-fb506469a46f?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Collar Constelación" loading="lazy" style="height: 220px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Constelación</h5>
+                                    <p class="text-muted">$ 89,000 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('collar_constelacion.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(14)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <h4 class="font-serif mt-4">Esencia Pura</h4>
-                <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 2px;">$ 3,200 MXN</p>
-                <button class="btn-premium mt-3" onclick="agregarAlCarrito(3)" style="padding: 10px 20px; font-size: 0.7rem;">Añadir al Carrito</button>
+
+                <div class="tab-pane fade" id="pulseras" role="tabpanel" tabindex="0">
+                    <div class="row g-4">
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="pulsera_1.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Brazalete Infinito" loading="lazy" style="height: 220px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Brazalete Infinito</h5>
+                                    <p class="text-muted">$ 22,000 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('pulsera_infinito.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(15)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="pulsera_2.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Pulsera Tenis" loading="lazy" style="height: 220px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Pulsera Riviera (Tenis)</h5>
+                                    <p class="text-muted">$ 115,000 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('pulsera_tenis.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(16)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="pulsera_3.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Esclava Oro" loading="lazy" style="height: 220px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Esclava Oro 18k</h5>
+                                    <p class="text-muted">$ 19,400 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('pulsera_esclava.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(17)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="pulsera_4.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Brazalete Pantera" loading="lazy" style="height: 220px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Brazalete Felino</h5>
+                                    <p class="text-muted">$ 43,000 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('brazalete_felino.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(18)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="pulsera_5.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Charm Aura" loading="lazy" style="height: 220px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Pulsera Charms AURA</h5>
+                                    <p class="text-muted">$ 14,000 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('pulsera_charms.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(19)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card">
+                                <img src="pulsera_6.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=300&auto=format&fit=crop'" class="card-img-top mx-auto" alt="Malla Milanesa" loading="lazy" style="height: 220px; object-fit: contain;">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="font-serif mt-2">Malla de Oro Rosa</h5>
+                                    <p class="text-muted">$ 26,800 MXN</p>
+                                    <div class="mt-auto">
+                                        <button class="btn btn-outline-dark w-100 mb-2" onclick="abrirModelo3D('pulsera_malla.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
+                                        <button class="btn btn-dark w-100" onclick="agregarAlCarrito(20)">Añadir al Carrito</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </section>
+
+
+
+
+
+
+
+
 
     <div class="iris-scroll-wrapper" id="atelier">
         <div class="iris-sticky-container">
@@ -360,5 +602,17 @@
             }, 5000);
         });
     </script>
+    <div class="modal fade" id="visor3DModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-dark text-light border-0">
+                <h5 class="modal-title font-serif">Visor 3D Interactivo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick="limpiarVisor3D()"></button>
+            </div>
+            <div class="modal-body p-0 bg-light" id="contenedorEscena3D" style="height: 60vh; position: relative;">
+                </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
