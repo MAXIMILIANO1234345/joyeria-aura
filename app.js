@@ -192,42 +192,31 @@ function mostrarToastVIP(mensaje) {
    5. SISTEMA DE CARRITO DE COMPRAS VIP
    ========================================================= */
 const catalogoJoyas = {
-    1: { 
-        nombre: "Solitario Eternidad", 
-        precio: 24500, 
-        imagen: "https://images.unsplash.com/photo-1605100804763-247f67b2548e?q=80&w=200&auto=format&fit=crop",
-        modelo: "anillo_mariposa.glb",
-        escala: "2.5 2.5 2.5",
-        rotacion: "15 -20 10",
-        pureza: "Platino 950 / Diamante VVS1",
-        metodo: "Forjado y Engastado a mano",
-        talla: "Hecho a la medida",
-        historia: "Una pieza que trasciende el tiempo. El Solitario Eternidad no es solo un anillo, es una declaración de intenciones. Su diamante central, meticulosamente seleccionado por nuestros gemólogos por su asombrosa claridad, captura cada destello de luz, reflejando una promesa inquebrantable."
-    },
-    2: { 
-        nombre: "Crossover Lumina", 
-        precio: 16800, 
-        imagen: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=200&auto=format&fit=crop",
-        modelo: "anillo.glb",
-        escala: "1.2 1.2 1.2",
-        rotacion: "15 -20 10",
-        pureza: "Oro Blanco 18K / Zafiro",
-        metodo: "Fundición a la cera perdida",
-        talla: "Hecho a la medida",
-        historia: "La convergencia perfecta entre la modernidad y el clasicismo. Sus líneas entrelazadas representan caminos que se unen. Forjado en oro blanco de 18 quilates, su estructura arquitectónica abraza sutilmente las gemas, creando un halo de luz que hipnotiza desde cualquier ángulo."
-    },
-    3: { 
-        nombre: "Esencia Pura", 
-        precio: 3200, 
-        imagen: "https://images.unsplash.com/photo-1599643478524-fb66f7ca265b?q=80&w=200&auto=format&fit=crop",
-        modelo: "metaretail_anillo_panthere.glb",
-        escala: "1 1 1",
-        rotacion: "15 -20 10",
-        pureza: "Plata .925 con Baño de Rodio",
-        metodo: "Pulido Espejo Artesanal",
-        talla: "Ajustable (5-9 US)",
-        historia: "La belleza en su expresión más minimalista. 'Esencia Pura' desafía la gravedad con un diseño continuo que fluye orgánicamente. Su acabado en rodio le otorga una resistencia extrema y un brillo platinado que la convierte en la compañera diaria perfecta para una elegancia silenciosa."
-    }
+    // Anillos
+    1: { nombre: "Solitario Eternidad", precio: 24500, imagen: "oro1.png" },
+    2: { nombre: "Crossover Lumina", precio: 16800, imagen: "anillo mariposa.png" },
+    3: { nombre: "Esencia Pura", precio: 3200, imagen: "puma1.png" },
+    4: { nombre: "Mariposa Cristal", precio: 12400, imagen: "anillo_4_render_1.jpg" },
+    5: { nombre: "Aura Imperial", precio: 35000, imagen: "anillo_5_render_1.jpg" },
+    6: { nombre: "Zafiro Noche", precio: 28900, imagen: "anillo_6_render_1.jpg" },
+    7: { nombre: "Alianza Platino", precio: 19500, imagen: "anillo_7_render_1.jpg" },
+    8: { nombre: "Rosa Eterna", precio: 21000, imagen: "anillo_8_render_1.jpg" },
+    
+    // Collares
+    9: { nombre: "Gargantilla Zafiro", precio: 45000, imagen: "collar_1_render_1.jpg" },
+    10: { nombre: "Colgante Lágrima", precio: 32500, imagen: "collar_2_render_1.jpg" },
+    11: { nombre: "Cadena Veneciana Oro", precio: 18900, imagen: "collar_3_render_1.jpg" },
+    12: { nombre: "Perla de Tahití", precio: 27000, imagen: "collar_4_render_1.jpg" },
+    13: { nombre: "Cruz de Diamantes", precio: 55000, imagen: "collar_5_render_1.jpg" },
+    14: { nombre: "Constelación", precio: 89000, imagen: "collar_6_render_1.jpg" },
+    
+    // Pulseras
+    15: { nombre: "Brazalete Infinito", precio: 22000, imagen: "pulsera_1_render_1.jpg" },
+    16: { nombre: "Pulsera Riviera (Tenis)", precio: 115000, imagen: "pulsera_2_render_1.jpg" },
+    17: { nombre: "Esclava Oro 18k", precio: 19400, imagen: "pulsera_3_render_1.jpg" },
+    18: { nombre: "Brazalete Felino", precio: 43000, imagen: "pulsera_4_render_1.jpg" },
+    19: { nombre: "Pulsera Charms AURA", precio: 14000, imagen: "pulsera_5_render_1.jpg" },
+    20: { nombre: "Malla de Oro Rosa", precio: 26800, imagen: "pulsera_6_render_1.jpg" }
 };
 
 let carritoCrudo = JSON.parse(localStorage.getItem('carritoAura')) || [];
