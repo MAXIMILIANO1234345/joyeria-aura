@@ -712,3 +712,13 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem("welcomeModalShown", "true");
     }
 });
+
+@app.route('/api/inventario', methods=['GET'])
+def obtener_inventario():
+    try:
+        # Extraemos todo el stock de Supabase
+        respuesta = boveda.table('inventario_joyas').select('*').execute()
+        return jsonify(respuesta.data), 200
+    except Exception as e:
+        # En un entorno de producción, evita devolver el error crudo por seguridad
+        return jsonify({"error": "Error interno del servidor"}), 500
