@@ -20,7 +20,6 @@ if (typeof AFRAME !== 'undefined') {
                 canvas.addEventListener('mousemove', this.onMouseMove);
                 canvas.addEventListener('mouseleave', this.onMouseUp);
 
-                // Mantenemos passive: false porque A-Frame maneja eventos táctiles que a veces requieren preventDefault
                 canvas.addEventListener('touchstart', this.onMouseDown, {passive: false});
                 canvas.addEventListener('touchend', this.onMouseUp);
                 canvas.addEventListener('touchmove', this.onMouseMove, {passive: false});
@@ -71,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     /* =========================================================
-       2. STICKY SCROLL IRIS OPTIMIZADO (Sin Layout Thrashing)
+       2. STICKY SCROLL IRIS OPTIMIZADO
        ========================================================= */
     const irisWrapper = document.querySelector('.iris-scroll-wrapper');
     const irisMask = document.querySelector('.iris-mask');
@@ -79,7 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (irisWrapper && irisMask) {
         let ticking = false;
 
-        // Extraemos la función del scroll para poder activarla/desactivarla
         const handleIrisScroll = () => {
             if (!ticking) {
                 window.requestAnimationFrame(() => {
@@ -105,7 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        // Solo escuchamos el evento scroll cuando el componente está visible en pantalla
         const irisIntersectionObserver = new IntersectionObserver((entries) => {
             if (entries[0].isIntersecting) {
                 window.addEventListener('scroll', handleIrisScroll, { passive: true });
@@ -119,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     /* =========================================================
-       3. RECEPTOR DE ADUANA VIP
+       3. RECEPTOR DE ADUANA VIP (PAYPAL / BACKEND)
        ========================================================= */
     const parametrosURL = new URLSearchParams(window.location.search);
     const estatusTransaccion = parametrosURL.get('transaccion');
@@ -161,11 +158,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     actualizarUI();
+    
+    // Disparar modal de bienvenida si no se ha mostrado
+    if (!localStorage.getItem("welcomeModalShown")) {
+        const welcomeModal = new bootstrap.Modal(document.getElementById('welcomeGuideModal'));
+        welcomeModal.show();
+        localStorage.setItem("welcomeModalShown", "true");
+    }
 });
 
 
 /* =========================================================
-   4. CONTROLADORES DE ALERTAS DE LUJO
+   4. CONTROLADORES DE ALERTAS Y TOASTS
    ========================================================= */
 function mostrarAlertaVIP(titulo, mensaje, icono = 'bi-gem') {
     document.getElementById('aura-alert-title').innerText = titulo;
@@ -189,7 +193,7 @@ function mostrarToastVIP(mensaje) {
 
 
 /* =========================================================
-   5. SISTEMA DE CARRITO DE COMPRAS VIP
+   5. CATÁLOGO COMPLETO Y SISTEMA DE CARRITO DE COMPRAS VIP
    ========================================================= */
 const catalogoJoyas = {
     // Anillos
@@ -221,11 +225,6 @@ const catalogoJoyas = {
 
 let carritoCrudo = JSON.parse(localStorage.getItem('carritoAura')) || [];
 let carrito = carritoCrudo.filter(item => item.joya_id !== null && typeof item.joya_id !== 'object');
-
-if (carritoCrudo.length !== carrito.length) {
-    localStorage.setItem('carritoAura', JSON.stringify(carrito));
-    console.warn("AURA: Se limpió información obsoleta del carrito.");
-}
 
 function actualizarUI() {
     const contenedor = document.getElementById('contenedor-carrito');
@@ -278,9 +277,9 @@ function actualizarUI() {
 }
 
 function agregarAlCarrito(idJoya, cantidad = 1) {
-    // Evita mezclar joyas distintas para respetar la estructura de tu base de datos actual
+    // REGLA DE BÓVEDA: Solo permitir procesar una pieza a la vez (evita corromper la BD)
     if (carrito.length > 0 && carrito[0].joya_id !== idJoya) {
-        mostrarToastVIP("Por protocolos de bóveda, debes procesar la compra de una pieza a la vez. Finaliza tu reserva actual o vacía la bolsa.");
+        mostrarToastVIP("Por protocolos de seguridad en tu certificado, procesa la compra de una pieza a la vez. Vacía tu bolsa primero.");
         return;
     }
     
@@ -347,96 +346,54 @@ async function procesarCheckoutCarrito() {
         const datos = await respuesta.json();
 
         if (respuesta.status === 200) {
-            let totalInversion = 0;
-            let itemsAnalytics = carrito.map(item => {
-                const joya = catalogoJoyas[item.joya_id];
-                totalInversion += joya.precio * item.cantidad;
-                return {
-                    item_name: joya.nombre,
-                    price: joya.precio,
-                    quantity: item.cantidad
-                };
-            });
-
-            if (typeof gtag === 'function') {
-                gtag('event', 'purchase', {
-                    transaction_id: "T_" + Date.now(),
-                    value: totalInversion,
-                    currency: "MXN",
-                    items: itemsAnalytics
-                });
-            }
-
             localStorage.removeItem('carritoAura'); 
             carrito = []; 
             actualizarUI(); 
             window.location.href = datos.url_pasarela; 
         } else {
             mostrarAlertaVIP("Transacción Declinada", datos.mensaje || "Hubo un error en la bóveda.", "bi-x-circle");
-            if (boton) { boton.innerText = "Completar la Inversión"; boton.disabled = false; }
+            if (boton) { boton.innerText = "Paso 2: Pagar ahora"; boton.disabled = false; }
         }
     } catch (error) {
         mostrarToastVIP("Error: No se pudo contactar con el taller central.");
-        if (boton) { boton.innerText = "Completar la Inversión"; boton.disabled = false; }
+        if (boton) { boton.innerText = "Paso 2: Pagar ahora"; boton.disabled = false; }
     }
 }
 
 
 /* =========================================================
-   6. SHOWROOM INMERSIVO VIP OPTIMIZADO (Sin inyección de DOM)
+   6. VISOR 3D (Renderizado desde el HTML)
    ========================================================= */
-function abrirVistaInmersiva(id) {
-    const joya = catalogoJoyas[id];
-    if(!joya) return;
-
-    // 1. Actualizar textos de la UI
-    document.getElementById('immersive-title').innerText = joya.nombre;
-    document.getElementById('immersive-story').innerText = joya.historia;
-    document.getElementById('immersive-purity').innerText = joya.pureza;
-    document.getElementById('immersive-method').innerText = joya.metodo;
-    document.getElementById('immersive-size').innerText = joya.talla;
-    document.getElementById('immersive-price').innerText = `$ ${joya.precio.toLocaleString()} MXN`;
-
-    const btnAdd = document.getElementById('btn-immersive-add');
-    btnAdd.onclick = () => {
-        agregarAlCarrito(id);
-        cerrarVistaInmersiva();
-    };
-
-    // 2. Modificar el modelo 3D reciclando el nodo existente, cero impacto de rendimiento
-    const modeloDinamico = document.getElementById('modelo-joya-dinamico');
-    if (modeloDinamico) {
-        modeloDinamico.setAttribute('gltf-model', `url(${joya.modelo})`);
-        modeloDinamico.setAttribute('rotation', joya.rotacion);
-        modeloDinamico.setAttribute('scale', joya.escala);
-    }
-
-    // 3. Mostrar la escena y el overlay
-    const escenaInmersiva = document.getElementById('escena-inmersiva');
-    if (escenaInmersiva) escenaInmersiva.style.display = 'block';
-
-    const overlay = document.getElementById('immersive-product-view');
-    overlay.style.display = 'block';
-    document.body.style.overflow = 'hidden';
-
-    setTimeout(() => {
-        overlay.classList.add('active');
-    }, 10);
+function abrirModelo3D(modeloGlb) {
+    const contenedor = document.getElementById('contenedorEscena3D');
+    
+    // Inyecta dinámicamente la escena A-Frame para no saturar la memoria desde el inicio
+    contenedor.innerHTML = `
+        <a-scene embedded vr-mode-ui="enabled: false" background="color: #f4f4f4">
+            <a-assets>
+                <a-asset-item id="modeloJoya" src="${modeloGlb}"></a-asset-item>
+            </a-assets>
+            
+            <a-entity gltf-model="#modeloJoya" 
+                      position="0 0 -3" 
+                      scale="1.5 1.5 1.5" 
+                      drag-rotate-component>
+                <a-animation attribute="rotation" to="0 360 0" dur="15000" repeat="indefinite" easing="linear"></a-animation>
+            </a-entity>
+            
+            <a-camera position="0 0 0" look-controls="enabled: false" wasd-controls="enabled: false"></a-camera>
+            <a-light type="ambient" color="#ffffff" intensity="0.8"></a-light>
+            <a-light type="directional" color="#ffffff" intensity="0.6" position="-1 2 1"></a-light>
+        </a-scene>
+    `;
+    
+    const visorModal = new bootstrap.Modal(document.getElementById('visor3DModal'));
+    visorModal.show();
 }
 
-function cerrarVistaInmersiva() {
-    const overlay = document.getElementById('immersive-product-view');
-    overlay.classList.remove('active');
-    
-    setTimeout(() => {
-        overlay.style.display = 'none';
-        
-        // Ocultar la escena en lugar de destruirla
-        const escenaInmersiva = document.getElementById('escena-inmersiva');
-        if (escenaInmersiva) escenaInmersiva.style.display = 'none';
-        
-        document.body.style.overflow = 'auto';
-    }, 500); 
+function limpiarVisor3D() {
+    const contenedor = document.getElementById('contenedorEscena3D');
+    contenedor.innerHTML = ''; // Destruye la escena para ahorrar recursos (impuesto térmico)
 }
 
 
@@ -594,7 +551,7 @@ function reiniciarModalLogin() {
 
 
 /* =========================================================
-   8. MI BÓVEDA (Gestión del Panel de Perfil y Descarga de PDF)
+   8. MI BÓVEDA (Gestión del Panel de Perfil y Descargas)
    ========================================================= */
 function gestionarAccesoPerfil() {
     const usuarioActivo = localStorage.getItem('auraVIP_User');
@@ -683,37 +640,12 @@ function cerrarSesionVIP() {
 }
 
 function seleccionarYGuiar(idJoya) {
-    // 1. Añadimos al carrito automáticamente
     agregarAlCarrito(idJoya);
     
-    // 2. Cerramos el modal de bienvenida
     const modal = bootstrap.Modal.getInstance(document.getElementById('welcomeGuideModal'));
-    modal.hide();
+    if(modal) modal.hide();
     
-    // 3. Hacemos scroll suave a la galería
     document.getElementById('galeria').scrollIntoView({ behavior: 'smooth' });
     
-    // 4. Toast de confirmación guiada
     mostrarToastVIP("Excelente elección. Hemos reservado tu pieza en tu bolsa.");
 }
-document.addEventListener("DOMContentLoaded", () => {
-    // Comprueba si el modal ya se mostró antes
-    if (!localStorage.getItem("welcomeModalShown")) {
-        // Si no se ha mostrado, inicializa y muestra el modal
-        const welcomeModal = new bootstrap.Modal(document.getElementById('welcomeGuideModal'));
-        welcomeModal.show();
-        
-        // Guarda en la memoria del navegador que ya se mostró
-        localStorage.setItem("welcomeModalShown", "true");
-    }
-});
-
-@app.route('/api/inventario', methods=['GET'])
-def obtener_inventario():
-    try:
-        # Extraemos todo el stock de Supabase
-        respuesta = boveda.table('inventario_joyas').select('*').execute()
-        return jsonify(respuesta.data), 200
-    except Exception as e:
-        # En un entorno de producción, evita devolver el error crudo por seguridad
-        return jsonify({"error": "Error interno del servidor"}), 500
