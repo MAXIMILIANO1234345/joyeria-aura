@@ -278,6 +278,12 @@ function actualizarUI() {
 }
 
 function agregarAlCarrito(idJoya, cantidad = 1) {
+    // Evita mezclar joyas distintas para respetar la estructura de tu base de datos actual
+    if (carrito.length > 0 && carrito[0].joya_id !== idJoya) {
+        mostrarToastVIP("Por protocolos de bóveda, debes procesar la compra de una pieza a la vez. Finaliza tu reserva actual o vacía la bolsa.");
+        return;
+    }
+    
     const itemExistente = carrito.find(item => item.joya_id === idJoya);
     if (itemExistente) {
         itemExistente.cantidad += cantidad;
