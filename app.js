@@ -116,45 +116,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     /* =========================================================
-       3. RECEPTOR DE ADUANA VIP (PAYPAL / BACKEND)
+       3. RECEPTOR DE ADUANA VIP (Actualizado a Tokenización)
        ========================================================= */
     const parametrosURL = new URLSearchParams(window.location.search);
     const estatusTransaccion = parametrosURL.get('transaccion');
-    const ordenUuid = parametrosURL.get('orden_uuid');
 
-    if (estatusTransaccion === 'aprobada' && ordenUuid) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-
-        mostrarAlertaVIP(
-            "Inversión Asegurada", 
-            "Tu adquisición ha sido capturada por la Bóveda Central. Estamos generando tu Recibo de Transacción y tu Certificado de Autenticidad...",
-            "bi-shield-check"
-        );
-
-        fetch('https://joyeria-aura-42ax.onrender.com/api/confirmar-compra', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orden_uuid: ordenUuid })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.estatus === 'CONFIRMADO' && data.correo_enviado) {
-                setTimeout(() => {
-                    mostrarToastVIP(`✉️ Recibo y Certificado digital despachados a tu correo electrónico.`);
-                }, 3000); 
-            } else if (data.estatus === 'YA_PROCESADO') {
-                mostrarToastVIP("Aviso: " + data.mensaje);
-            } else {
-                mostrarToastVIP("⚠️ El pago está asegurado, pero hubo una demora al entregar los documentos digitales.");
-            }
-        })
-        .catch(err => {
-            console.error("Error al certificar:", err);
-            mostrarToastVIP("Tu pago fue procesado, pero no pudimos emitir los recibos digitales.");
-        });
-
-    } else if (estatusTransaccion === 'cancelada') {
+    if (estatusTransaccion === 'cancelada') {
         mostrarToastVIP("Transacción pausada. Tu selección seguirá reservada en bóveda.");
+        window.history.replaceState({}, document.title, window.location.pathname);
     }
 
     actualizarUI();
@@ -277,7 +246,6 @@ function actualizarUI() {
 }
 
 function agregarAlCarrito(idJoya, cantidad = 1) {
-    // REGLA DE BÓVEDA: Solo permitir procesar una pieza a la vez (evita corromper la BD)
     if (carrito.length > 0 && carrito[0].joya_id !== idJoya) {
         mostrarToastVIP("Por protocolos de seguridad en tu certificado, procesa la compra de una pieza a la vez. Vacía tu bolsa primero.");
         return;
@@ -330,6 +298,14 @@ async function procesarCheckoutCarrito() {
         return;
     }
 
+    // SIMULADOR TEMPORAL DE TOKEN DE TARJETA (Reemplazar luego con Stripe Elements en HTML)
+    const tokenSimulado = prompt("Seguridad Bóveda: Ingresa el Token seguro de Stripe (Escribe 'tok_visa' para simular un pago exitoso):", "tok_visa");
+    
+    if (!tokenSimulado) {
+        mostrarToastVIP("Operación cancelada. Se requiere una validación de pago.");
+        return;
+    }
+
     const boton = document.querySelector('.btn-checkout');
     if (boton) {
         boton.innerText = "Asegurando colección...";
@@ -337,27 +313,46 @@ async function procesarCheckoutCarrito() {
     }
 
     try {
-       // Reemplaza el fetch viejo hacia /api/reservar-carrito por este:
-const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/procesar-pago-seguro', {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-        email: emailUsuario, // El email del cliente
-        items: carritoActual, // El array con los IDs de las joyas
-        token: tokenGeneradoPorPasarela // El token seguro (ej. de Stripe)
-    })
-});
+        const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/procesar-pago-seguro', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                email: usuarioActivo, 
+                items: carrito,
+                token: tokenSimulado
+            })
+        });
 
-const resultado = await respuesta.json();
+        const datos = await respuesta.json();
 
-if (respuesta.ok) {
-    console.log("Transacción exitosa, UUID:", resultado.orden_uuid);
-    // Redirigir a pantalla de éxito o limpiar carrito
-} else {
-    console.error("Error en el pago:", resultado.mensaje);
-}
+        if (respuesta.status === 200) {
+            localStorage.removeItem('carritoAura'); 
+            carrito = []; 
+            actualizarUI(); 
+            
+            // Cerrar panel lateral
+            const cartElement = document.getElementById('cartDrawer');
+            const cartOffcanvas = bootstrap.Offcanvas.getInstance(cartElement);
+            if (cartOffcanvas) cartOffcanvas.hide();
+
+            // Mostrar Alerta de Éxito y abrir Perfil
+            mostrarAlertaVIP("Inversión Asegurada", "Tu adquisición ha sido capturada por la Bóveda Central. Estamos generando tu Recibo de Transacción y tu Certificado de Autenticidad...", "bi-shield-check");
+            
+            setTimeout(() => {
+                gestionarAccesoPerfil(); // Abre el perfil para ver el PDF
+            }, 2500);
+
+        } else {
+            mostrarAlertaVIP("Transacción Declinada", datos.mensaje || datos.error || "Hubo un error en la bóveda.", "bi-x-circle");
+        }
+    } catch (error) {
+        mostrarToastVIP("Error: No se pudo contactar con el taller central.");
+    } finally {
+        if (boton) { 
+            boton.innerHTML = 'Paso 2: Pagar ahora <i class="bi bi-arrow-right ms-2"></i>'; 
+            boton.disabled = false; 
+        }
+    }
 }
 
 
@@ -367,7 +362,6 @@ if (respuesta.ok) {
 function abrirModelo3D(modeloGlb) {
     const contenedor = document.getElementById('contenedorEscena3D');
     
-    // Inyecta dinámicamente la escena A-Frame para no saturar la memoria desde el inicio
     contenedor.innerHTML = `
         <a-scene embedded vr-mode-ui="enabled: false" background="color: #f4f4f4">
             <a-assets>
@@ -393,7 +387,7 @@ function abrirModelo3D(modeloGlb) {
 
 function limpiarVisor3D() {
     const contenedor = document.getElementById('contenedorEscena3D');
-    contenedor.innerHTML = ''; // Destruye la escena para ahorrar recursos (impuesto térmico)
+    contenedor.innerHTML = ''; 
 }
 
 
