@@ -1,14 +1,14 @@
 # ==========================================
 # @author: Maximiliano Cabello
-# Proyecto: AURA Alta Joyería - Servidor Central
+# Proyecto: AURA Alta Joyería - Servidor Central (Producción PCI-DSS)
 # ==========================================
 
 import os
 import smtplib
 import traceback
-import requests
 import random
 import io
+import stripe
 from datetime import datetime, timedelta, timezone
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
@@ -26,8 +26,10 @@ app = Flask(__name__)
 # Configuración global de CORS para permitir todas las solicitudes del frontend
 CORS(app)
 
-# Configuración de Supabase
+# Configuración de Supabase y Stripe
 boveda = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SECRET_KEY"))
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
 # ==========================================
 # MOTORES DE CORREO (SMTP)
@@ -40,7 +42,7 @@ def enviar_ticket_compra_html(destinatario, nombre_pieza, uuid_orden, precio_mxn
     msg = MIMEMultipart()
     msg['From'] = f"AURA Alta Joyería <{remitente}>"
     msg['To'] = destinatario
-    msg['Subject'] = f"Recibo de Inversión - Orden {uuid_orden[:8]}"
+    msg['Subject'] = f"Recibo de Inversión - Orden {str(uuid_orden)[:8]}"
     
     html = f"""
     <!DOCTYPE html>
@@ -98,21 +100,17 @@ def enviar_certificado_html(destinatario, nombre_pieza, uuid_orden):
     </head>
     <body style="font-family: 'Jost', sans-serif; background-color: #f4f4f4; padding: 40px 20px; text-align: center; margin: 0;">
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 50px 40px; border: 1px solid #eaeaea; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
-            
             <h1 style="font-family: 'Cormorant Garamond', serif; font-size: 36px; color: #222; letter-spacing: 6px; margin-bottom: 5px;">AURA</h1>
             <p style="font-size: 11px; letter-spacing: 3px; color: #888; text-transform: uppercase; border-bottom: 1px solid #b76e79; padding-bottom: 20px; margin-top: 0;">
                 Alta Joyeria • Certificado de Propiedad
             </p>
-            
             <p style="margin-top: 40px; font-size: 15px; color: #555; font-weight: 300;">Extendemos el presente documento para certificar la autenticidad y propiedad de la pieza:</p>
             <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 28px; color: #b76e79; margin: 25px 0; font-style: italic;">{nombre_pieza}</h2>
             <p style="font-size: 14px; color: #555; font-weight: 300; line-height: 1.6;">Forjada con los mas altos estandares eticos y de calidad, garantizando la pureza de sus materiales. Esta pieza pertenece oficialmente a la coleccion privada de su portador.</p>
-            
             <div style="margin-top: 40px; padding: 25px; background-color: #fcfcfc; border-left: 3px solid #b76e79; text-align: left;">
                 <p style="margin: 5px 0; font-size: 13px; color: #333;"><strong>FOLIO DE REGISTRO EN BOVEDA:</strong> <br><span style="font-family: monospace; color: #777; font-size: 12px;">{uuid_orden}</span></p>
                 <p style="margin: 15px 0 5px 0; font-size: 13px; color: #333;"><strong>FECHA DE EMISION:</strong> <br><span style="color: #555;">{datetime.now().strftime('%d/%m/%Y')}</span></p>
             </div>
-            
             <p style="margin-top: 50px; font-size: 11px; color: #aaa; font-style: italic;">Este documento digital esta respaldado por los registros centrales del Atelier AURA.</p>
         </div>
     </body>
@@ -198,7 +196,7 @@ def crear_cuenta():
             "cuenta_verificada": False
         }).execute()
         
-        exito = enviar_codigo_email(email, codigo)
+        enviar_codigo_email(email, codigo)
         return jsonify({"mensaje": "Cuenta creada. Token enviado al correo."}), 200
             
     except Exception as e:
@@ -232,7 +230,7 @@ def iniciar_sesion():
             "expiracion_codigo": expiracion
         }).eq('email', email).execute()
         
-        exito = enviar_codigo_email(email, codigo)
+        enviar_codigo_email(email, codigo)
         return jsonify({"mensaje": "Credenciales correctas. Codigo 2FA enviado."}), 200
         
     except Exception as e:
@@ -319,11 +317,15 @@ def perfil_usuario():
         return jsonify({"mensaje": "Error interno del servidor"}), 500
 
 # ==========================================
-# RUTAS DE RESERVA Y PASARELA DE PAGO
+# PASARELA DE PAGO: STRIPE (WHITE-LABEL & TOKENIZADO)
 # ==========================================
 
-@app.route('/api/reservar-carrito', methods=['POST', 'OPTIONS'])
-def reservar_carrito():
+@app.route('/api/procesar-pago-seguro', methods=['POST', 'OPTIONS'])
+def procesar_pago_seguro():
+    """ 
+    Endpoint que recibe el Token seguro del frontend sin salir de la página.
+    Genera el cargo y registra la orden en Supabase.
+    """
     if request.method == 'OPTIONS':
         return jsonify({}), 200
 
@@ -331,22 +333,21 @@ def reservar_carrito():
         data = request.json
         email = data.get('email')
         items = data.get('items', [])
+        token_stripe = data.get('token') # El token criptográfico (ej. tok_1J2...)
 
-        if not items:
-            return jsonify({"mensaje": "El carrito esta vacio"}), 400
+        if not items or not token_stripe:
+            return jsonify({"mensaje": "Datos de compra incompletos"}), 400
 
+        # Identificar usuario
         res_user = boveda.table('usuarios_vip').select('id').eq('email', email).execute()
         usuario_uuid = res_user.data[0]['id'] if res_user.data else None
 
+        # Calcular el costo total estrictamente desde la Base de Datos (Seguridad)
         monto_total_centavos = 0
         cantidad_total = 0
         
         for item in items:
-            joya_id_raw = item.get('joya_id')
-            if joya_id_raw is None or isinstance(joya_id_raw, dict):
-                return jsonify({"mensaje": "Formato desactualizado. Por favor, limpia tu carrito."}), 400
-                
-            joya_id = int(joya_id_raw)
+            joya_id = int(item.get('joya_id'))
             cantidad = int(item.get('cantidad', 1))
             
             res_joya = boveda.table('joyas_stock').select('precio_centavos').eq('id', joya_id).execute()
@@ -356,90 +357,103 @@ def reservar_carrito():
 
         primer_joya_id = int(items[0]['joya_id'])
 
+        # Procesar el cargo con Stripe usando el token
+        cargo = stripe.Charge.create(
+            amount=monto_total_centavos,
+            currency="mxn",
+            source=token_stripe,
+            description=f"Inversión AURA - Usuario: {email}"
+        )
+
+        # Registrar la orden pagada en la bóveda
         res_orden = boveda.table('ordenes_compra').insert({
             'usuario_email': email,
             'usuario_id': usuario_uuid,
             'joya_id': primer_joya_id, 
             'cantidad': cantidad_total,
             'monto_total_centavos': monto_total_centavos,
-            'estado': 'PENDIENTE_PAYPAL'
+            'estado': 'PAGADO', # El pago se confirmó en la línea anterior
+            'stripe_charge_id': cargo.id
         }).execute()
         
         orden_uuid = res_orden.data[0]['id']
 
-        token_req = requests.post(
-            "https://api-m.sandbox.paypal.com/v1/oauth2/token", 
-            data={"grant_type": "client_credentials"}, 
-            auth=(os.getenv("PAYPAL_CLIENT_ID"), os.getenv("PAYPAL_SECRET"))
-        )
-        token = token_req.json()["access_token"]
-        
-        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
-        payload = {
-            "intent": "CAPTURE",
-            "purchase_units": [{"amount": {"currency_code": "MXN", "value": f"{monto_total_centavos/100:.2f}"}}],
-            "application_context": {
-                "return_url": f"https://maximiliano1234345.github.io/joyeria-aura/index.html?transaccion=aprobada&orden_uuid={orden_uuid}",
-                "cancel_url": "https://maximiliano1234345.github.io/joyeria-aura/index.html?transaccion=cancelada"
-            }
-        }
-        paypal_res = requests.post("https://api-m.sandbox.paypal.com/v2/checkout/orders", headers=headers, json=payload).json()
-        
-        boveda.table('ordenes_compra').update({"paypal_order_id": paypal_res['id']}).eq('id', orden_uuid).execute()
-        
-        enlace = next(item['href'] for item in paypal_res['links'] if item['rel'] == 'approve')
-        return jsonify({"orden_uuid": orden_uuid, "url_pasarela": enlace}), 200
-
-    except Exception as e:
-        print(f"❌ [RESERVAR CARRITO ERROR]: {traceback.format_exc()}")
-        return jsonify({"mensaje": "Error en reserva del carrito"}), 500
-
-@app.route('/api/confirmar-compra', methods=['POST'])
-def confirmar_compra():
-    uuid_orden = request.json.get('orden_uuid')
-    try:
-        boveda.table('ordenes_compra').update({"estado": "PAGADO"}).eq('id', uuid_orden).execute()
-        
-        res = boveda.table('ordenes_compra').select('joya_id, usuario_email').eq('id', uuid_orden).execute()
-        email_cliente = res.data[0]['usuario_email']
-        joya_id = res.data[0]['joya_id']
-        
-        res_joya = boveda.table('joyas_stock').select('nombre, precio_centavos').eq('id', joya_id).execute()
+        # Extraer datos visuales para los correos
+        res_joya = boveda.table('joyas_stock').select('nombre').eq('id', primer_joya_id).execute()
         nombre_joya = res_joya.data[0]['nombre']
-        precio_formateado = f"{(res_joya.data[0]['precio_centavos'] / 100.0):,.2f}"
+        precio_formateado = f"{(monto_total_centavos / 100.0):,.2f}"
+
+        # Disparar correos
+        enviar_ticket_compra_html(email, nombre_joya, orden_uuid, precio_formateado)
+        enviar_certificado_html(email, nombre_joya, orden_uuid)
+
+        return jsonify({
+            "estatus": "CONFIRMADO", 
+            "orden_uuid": orden_uuid,
+            "mensaje": "Transacción exitosa. Revisar bandeja de entrada."
+        }), 200
+
+    except stripe.error.CardError as e:
+        # La tarjeta fue declinada (sin fondos, vencida, etc.)
+        return jsonify({"mensaje": "La tarjeta fue declinada.", "detalle": str(e)}), 402
+    except Exception as e:
+        print(f"❌ [ERROR PROCESAR PAGO]: {traceback.format_exc()}")
+        return jsonify({"mensaje": "Error interno en el procesamiento"}), 500
+
+
+@app.route('/api/webhook/stripe', methods=['POST'])
+def webhook_stripe():
+    """
+    Ruta de seguridad (SCA/PCI). Stripe se comunica directamente con este endpoint
+    para notificar eventos asíncronos (como reembolsos o pagos completados que tardan).
+    """
+    payload = request.data
+    sig_header = request.headers.get('Stripe-Signature')
+
+    try:
+        # Validación de la firma criptográfica oficial de Stripe
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError as e:
+        # Payload inválido
+        return jsonify({"error": "Payload invalido"}), 400
+    except stripe.error.SignatureVerificationError as e:
+        # Firma inválida (Intento de ataque)
+        return jsonify({"error": "Firma invalida"}), 400
+
+    # Lógica de telemetría y auditoría en base a eventos de Stripe
+    if event['type'] == 'charge.succeeded':
+        charge = event['data']['object']
+        # Aquí puedes implementar una validación secundaria en Supabase o
+        # enviar datos de analytics (groupby) para tus registros de ingresos.
+        print(f"✅ [WEBHOOK AUDIT]: Cargo {charge['id']} verificado exitosamente.")
         
-        # Disparamos ambos correos de forma independiente
-        exito_ticket = enviar_ticket_compra_html(email_cliente, nombre_joya, uuid_orden, precio_formateado)
-        exito_cert = enviar_certificado_html(email_cliente, nombre_joya, uuid_orden)
-        
-        exito_total = exito_ticket and exito_cert
-        
-        return jsonify({"estatus": "CONFIRMADO", "correo_enviado": exito_total}), 200
-        
-    except Exception:
-        print(f"❌ [CONFIRMAR ERROR]: {traceback.format_exc()}")
-        return jsonify({"mensaje": "Error interno"}), 500
+    elif event['type'] == 'charge.refunded':
+        charge = event['data']['object']
+        # Si reembolsas la compra de prueba desde el dashboard de Stripe
+        boveda.table('ordenes_compra').update({"estado": "REEMBOLSADO"}).eq('stripe_charge_id', charge['id']).execute()
+        print(f"⚠️ [WEBHOOK AUDIT]: Cargo {charge['id']} reembolsado.")
+
+    return jsonify({"status": "success"}), 200
 
 # ==========================================
-# NUEVO: GENERADOR DE CERTIFICADOS PDF
+# GENERADOR DE CERTIFICADOS PDF
 # ==========================================
 
 @app.route('/api/descargar-certificado/<orden_uuid>', methods=['GET'])
 def descargar_certificado(orden_uuid):
     try:
-        # 1. Buscar los detalles de la orden
         res = boveda.table('ordenes_compra').select('joya_id, fecha_creacion, monto_total_centavos').eq('id', orden_uuid).execute()
         if not res.data:
             return jsonify({"mensaje": "Orden no encontrada"}), 404
             
         orden = res.data[0]
         
-        # 2. Buscar el nombre de la joya
         res_joya = boveda.table('joyas_stock').select('nombre').eq('id', orden['joya_id']).execute()
         nombre_joya = res_joya.data[0]['nombre'] if res_joya.data else "Joya AURA"
         precio_formateado = f"{(orden['monto_total_centavos'] / 100.0):,.2f}"
 
-        # 3. Construir el PDF
         pdf = FPDF(orientation='P', unit='mm', format='A4')
         pdf.add_page()
         
@@ -450,7 +464,7 @@ def descargar_certificado(orden_uuid):
         pdf.set_font('helvetica', 'I', 10)
         pdf.set_text_color(150, 150, 150)
         pdf.cell(0, 10, 'CERTIFICADO DE AUTENTICIDAD Y PROPIEDAD', ln=True, align='C')
-        pdf.line(20, 45, 190, 45) # Linea divisoria
+        pdf.line(20, 45, 190, 45)
         
         # Cuerpo
         pdf.ln(20)
@@ -460,7 +474,7 @@ def descargar_certificado(orden_uuid):
         
         pdf.ln(10)
         pdf.set_font('helvetica', 'B', 20)
-        pdf.set_text_color(183, 110, 121) # Oro rosa cenizo
+        pdf.set_text_color(183, 110, 121) 
         pdf.cell(0, 10, nombre_joya, ln=True, align='C')
         
         # Detalles
@@ -477,16 +491,18 @@ def descargar_certificado(orden_uuid):
         pdf.set_text_color(150, 150, 150)
         pdf.multi_cell(0, 5, 'Esta pieza ha sido forjada en nuestro Atelier siguiendo los mas estrictos controles de calidad, garantizando la pureza de sus materiales y el origen etico de sus gemas.', align='C')
 
-        # CORRECCIÓN AQUÍ: Obtener el bytearray de fpdf2 directamente
         pdf_bytes = bytes(pdf.output())
         
         return send_file(
             io.BytesIO(pdf_bytes),
             mimetype='application/pdf',
             as_attachment=True,
-            download_name=f'Certificado_AURA_{orden_uuid[:8]}.pdf'
+            download_name=f'Certificado_AURA_{str(orden_uuid)[:8]}.pdf'
         )
 
     except Exception as e:
         print(f"❌ [ERROR PDF]: {traceback.format_exc()}")
         return jsonify({"mensaje": "Error al generar certificado"}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
