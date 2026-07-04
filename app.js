@@ -337,27 +337,27 @@ async function procesarCheckoutCarrito() {
     }
 
     try {
-        const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/reservar-carrito', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: usuarioActivo, items: carrito })
-        });
+       // Reemplaza el fetch viejo hacia /api/reservar-carrito por este:
+const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/procesar-pago-seguro', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        email: emailUsuario, // El email del cliente
+        items: carritoActual, // El array con los IDs de las joyas
+        token: tokenGeneradoPorPasarela // El token seguro (ej. de Stripe)
+    })
+});
 
-        const datos = await respuesta.json();
+const resultado = await respuesta.json();
 
-        if (respuesta.status === 200) {
-            localStorage.removeItem('carritoAura'); 
-            carrito = []; 
-            actualizarUI(); 
-            window.location.href = datos.url_pasarela; 
-        } else {
-            mostrarAlertaVIP("Transacción Declinada", datos.mensaje || "Hubo un error en la bóveda.", "bi-x-circle");
-            if (boton) { boton.innerText = "Paso 2: Pagar ahora"; boton.disabled = false; }
-        }
-    } catch (error) {
-        mostrarToastVIP("Error: No se pudo contactar con el taller central.");
-        if (boton) { boton.innerText = "Paso 2: Pagar ahora"; boton.disabled = false; }
-    }
+if (respuesta.ok) {
+    console.log("Transacción exitosa, UUID:", resultado.orden_uuid);
+    // Redirigir a pantalla de éxito o limpiar carrito
+} else {
+    console.error("Error en el pago:", resultado.mensaje);
+}
 }
 
 
