@@ -352,7 +352,7 @@ def procesar_pago_seguro():
             
             res_joya = boveda.table('joyas_stock').select('precio_centavos').eq('id', joya_id).execute()
             if res_joya.data:
-                monto_total_centavos += (res_joya.data[0]['precio_centavos'] * cantidad)
+                monto_total_centavos += int(float(res_joya.data[0]['precio_centavos']) * 100 * cantidad)
                 cantidad_total += cantidad
 
         primer_joya_id = int(items[0]['joya_id'])
