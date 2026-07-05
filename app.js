@@ -1,4 +1,29 @@
 /* =========================================================
+   --- MOTOR DE TOKENIZACIÓN STRIPE ---
+   ========================================================= */
+const stripePublic = typeof Stripe !== 'undefined' ? Stripe('pk_live_51TpaQ5RxCocxj1aEaSwfY8eKItAEkPXDLQB3yyxoxSBtNspMyYMcuEeOgOWR2zDL9FdxJNyzmtNAcmzuJvTJxF8E00KkTp2vUA') : null;
+let cardElement = null;
+
+if (stripePublic) {
+    const elements = stripePublic.elements();
+    const style = {
+        base: {
+            color: '#222222',
+            fontFamily: '"Jost", sans-serif',
+            fontSmoothing: 'antialiased',
+            fontSize: '15px',
+            '::placeholder': { color: '#aab7c4' }
+        },
+        invalid: {
+            color: '#b76e79', // Tono oro rosa cenizo para errores
+            iconColor: '#b76e79'
+        }
+    };
+    // Instanciamos el iframe de la tarjeta sin solicitar código postal para agilizar el checkout
+    cardElement = elements.create('card', {style: style, hidePostalCode: true});
+}
+
+/* =========================================================
    0. MOTOR DE FÍSICAS CUSTOM PARA A-FRAME (Interacción VIP)
    ========================================================= */
 if (typeof AFRAME !== 'undefined') {
@@ -53,9 +78,30 @@ if (typeof AFRAME !== 'undefined') {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    /* =========================================================
-       1. SCROLL REVEAL (Galería)
-       ========================================================= */
+    /* 1. Inyección de Stripe en el DOM */
+    if (cardElement) {
+        const cardContainer = document.getElementById('card-element');
+        if (cardContainer) {
+            cardElement.mount('#card-element');
+            
+            // Escuchar errores de tipeo en vivo
+            cardElement.on('change', function(event) {
+                const displayError = document.getElementById('card-errors');
+                if (event.error) {
+                    displayError.textContent = event.error.message;
+                } else {
+                    displayError.textContent = '';
+                }
+            });
+        }
+    }
+
+    const btnPagar = document.getElementById('btn-pagar-stripe');
+    if (btnPagar) {
+        btnPagar.addEventListener('click', procesarCheckoutCarrito);
+    }
+
+    /* 2. SCROLL REVEAL (Galería) */
     const reveals = document.querySelectorAll('.reveal');
     const revealObserver = new IntersectionObserver((entries, observer) => {
         entries.forEach(entry => {
@@ -69,9 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     reveals.forEach(reveal => revealObserver.observe(reveal));
 
 
-    /* =========================================================
-       2. STICKY SCROLL IRIS OPTIMIZADO
-       ========================================================= */
+    /* 3. STICKY SCROLL IRIS OPTIMIZADO */
     const irisWrapper = document.querySelector('.iris-scroll-wrapper');
     const irisMask = document.querySelector('.iris-mask');
 
@@ -114,10 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
         irisIntersectionObserver.observe(irisWrapper);
     }
 
-
-    /* =========================================================
-       3. RECEPTOR DE ADUANA VIP (Actualizado a Tokenización)
-       ========================================================= */
+    /* 4. LIMPIEZA DE RUTAS */
     const parametrosURL = new URLSearchParams(window.location.search);
     const estatusTransaccion = parametrosURL.get('transaccion');
 
@@ -128,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     actualizarUI();
     
-    // Disparar modal de bienvenida si no se ha mostrado
+    // Disparar modal de bienvenida
     if (!localStorage.getItem("welcomeModalShown")) {
         const welcomeModal = new bootstrap.Modal(document.getElementById('welcomeGuideModal'));
         welcomeModal.show();
@@ -138,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 /* =========================================================
-   4. CONTROLADORES DE ALERTAS Y TOASTS
+   CONTROLADORES DE ALERTAS Y TOASTS
    ========================================================= */
 function mostrarAlertaVIP(titulo, mensaje, icono = 'bi-gem') {
     document.getElementById('aura-alert-title').innerText = titulo;
@@ -162,7 +203,7 @@ function mostrarToastVIP(mensaje) {
 
 
 /* =========================================================
-   5. CATÁLOGO COMPLETO Y SISTEMA DE CARRITO DE COMPRAS VIP
+   CATÁLOGO COMPLETO Y SISTEMA DE CARRITO DE COMPRAS VIP
    ========================================================= */
 const catalogoJoyas = {
     // Anillos
@@ -281,83 +322,76 @@ async function procesarCheckoutCarrito() {
 
     const usuarioActivo = localStorage.getItem('auraVIP_User');
     if (!usuarioActivo) {
-        mostrarAlertaVIP(
-            "Autenticación Requerida", 
-            "Por protocolos de seguridad, es obligatorio iniciar sesión en nuestra bóveda antes de procesar una inversión.",
-            "bi-shield-lock"
-        );
-        
         const cartElement = document.getElementById('cartDrawer');
         const cartOffcanvas = bootstrap.Offcanvas.getInstance(cartElement);
         if (cartOffcanvas) cartOffcanvas.hide();
-        
-        setTimeout(() => {
-            const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-            loginModal.show();
-        }, 500);
+        setTimeout(() => { new bootstrap.Modal(document.getElementById('loginModal')).show(); }, 500);
         return;
     }
 
-    // SIMULADOR TEMPORAL DE TOKEN DE TARJETA (Reemplazar luego con Stripe Elements en HTML)
-    const tokenSimulado = prompt("Seguridad Bóveda: Ingresa el Token seguro de Stripe (Escribe 'tok_visa' para simular un pago exitoso):", "tok_visa");
-    
-    if (!tokenSimulado) {
-        mostrarToastVIP("Operación cancelada. Se requiere una validación de pago.");
-        return;
-    }
-
-    const boton = document.querySelector('.btn-checkout');
+    const boton = document.getElementById('btn-pagar-stripe');
     if (boton) {
-        boton.innerText = "Asegurando colección...";
+        boton.innerText = "Auditando credenciales...";
         boton.disabled = true;
     }
 
     try {
+        // 1. Solicitamos el Token seguro a la pasarela (encriptando la tarjeta)
+        const {token, error} = await stripePublic.createToken(cardElement);
+
+        if (error) {
+            // Error en la tarjeta ingresada (número mal, vencida, etc.)
+            document.getElementById('card-errors').textContent = error.message;
+            if (boton) {
+                boton.innerHTML = 'Asegurar Inversión <i class="bi bi-arrow-right ms-2"></i>';
+                boton.disabled = false;
+            }
+            return; 
+        }
+
+        // 2. Mandamos únicamente el Token a la bóveda (Servidor Render)
         const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/procesar-pago-seguro', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                email: usuarioActivo, 
+            body: JSON.stringify({
+                email: usuarioActivo,
                 items: carrito,
-                token: tokenSimulado
+                token: token.id 
             })
         });
 
         const datos = await respuesta.json();
 
         if (respuesta.status === 200) {
-            localStorage.removeItem('carritoAura'); 
-            carrito = []; 
-            actualizarUI(); 
-            
-            // Cerrar panel lateral
-            const cartElement = document.getElementById('cartDrawer');
-            const cartOffcanvas = bootstrap.Offcanvas.getInstance(cartElement);
+            localStorage.removeItem('carritoAura');
+            carrito = [];
+            actualizarUI();
+            cardElement.clear(); 
+
+            const cartElementUI = document.getElementById('cartDrawer');
+            const cartOffcanvas = bootstrap.Offcanvas.getInstance(cartElementUI);
             if (cartOffcanvas) cartOffcanvas.hide();
 
-            // Mostrar Alerta de Éxito y abrir Perfil
-            mostrarAlertaVIP("Inversión Asegurada", "Tu adquisición ha sido capturada por la Bóveda Central. Estamos generando tu Recibo de Transacción y tu Certificado de Autenticidad...", "bi-shield-check");
-            
-            setTimeout(() => {
-                gestionarAccesoPerfil(); // Abre el perfil para ver el PDF
-            }, 2500);
+            mostrarAlertaVIP("Inversión Asegurada", "Tu adquisición ha sido capturada por la Bóveda Central. Los certificados están siendo generados y entregados.", "bi-shield-check");
+
+            setTimeout(() => { gestionarAccesoPerfil(); }, 2500);
 
         } else {
-            mostrarAlertaVIP("Transacción Declinada", datos.mensaje || datos.error || "Hubo un error en la bóveda.", "bi-x-circle");
+            mostrarAlertaVIP("Transacción Declinada", datos.mensaje || datos.detalle || "La entidad bancaria rechazó la operación.", "bi-x-circle");
         }
     } catch (error) {
-        mostrarToastVIP("Error: No se pudo contactar con el taller central.");
+        mostrarToastVIP("Error: No se pudo enlazar con la pasarela.");
     } finally {
-        if (boton) { 
-            boton.innerHTML = 'Paso 2: Pagar ahora <i class="bi bi-arrow-right ms-2"></i>'; 
-            boton.disabled = false; 
+        if (boton) {
+            boton.innerHTML = 'Asegurar Inversión <i class="bi bi-arrow-right ms-2"></i>';
+            boton.disabled = false;
         }
     }
 }
 
 
 /* =========================================================
-   6. VISOR 3D (Renderizado desde el HTML)
+   VISOR 3D (Renderizado desde el HTML)
    ========================================================= */
 function abrirModelo3D(modeloGlb) {
     const contenedor = document.getElementById('contenedorEscena3D');
@@ -392,7 +426,7 @@ function limpiarVisor3D() {
 
 
 /* =========================================================
-   7. SISTEMA DE AUTENTICACIÓN (Login / Registro + 2FA)
+   SISTEMA DE AUTENTICACIÓN (Login / Registro + 2FA)
    ========================================================= */
 let correoTemporal = ""; 
 
@@ -545,7 +579,7 @@ function reiniciarModalLogin() {
 
 
 /* =========================================================
-   8. MI BÓVEDA (Gestión del Panel de Perfil y Descargas)
+   MI BÓVEDA (Gestión del Panel de Perfil y Descargas)
    ========================================================= */
 function gestionarAccesoPerfil() {
     const usuarioActivo = localStorage.getItem('auraVIP_User');
