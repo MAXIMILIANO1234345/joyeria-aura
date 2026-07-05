@@ -1,822 +1,645 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AURA | Alta Joyería</title>
-    
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
-    
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-M7PVDXR98P"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
+/* =========================================================
+   0. MOTOR DE FÍSICAS CUSTOM PARA A-FRAME (Interacción VIP)
+   ========================================================= */
+if (typeof AFRAME !== 'undefined') {
+    AFRAME.registerComponent('drag-rotate-component', {
+        schema: { speed: { default: 1.5 } },
+        init: function () {
+            this.ifMouseDown = false;
+            this.x_cord = 0;
+            this.y_cord = 0;
 
-      gtag('config', 'G-M7PVDXR98P');
-    </script>
-    
-    <link rel="stylesheet" href="style.css">
-    <script src="app.js" defer></script>
-    
-    <script src="https://js.stripe.com/v3/"></script>
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg fixed-top navbar-glass animate-on-load">
-        <div class="container-fluid px-5">
-            <div class="d-flex align-items-center w-100">
-                <ul class="navbar-nav me-auto flex-row d-none d-lg-flex">
-                    <li class="nav-item"><a class="nav-link-custom" href="#galeria">Colecciones</a></li>
-                    <li class="nav-item"><a class="nav-link-custom" href="#atelier">El Atelier</a></li>
-                </ul>
-                <a class="brand-logo position-absolute top-50 start-50 translate-middle" href="#">AURA</a>
-              <ul class="navbar-nav ms-auto flex-row align-items-center nav-icons">
-    <li class="nav-item me-3" onclick="gestionarAccesoPerfil()" style="cursor: pointer; border: 1px solid rgba(0,0,0,0.1); padding: 5px 15px; border-radius: 30px; transition: all 0.3s;">
-        <i class="bi bi-person me-2"></i><span style="font-size: 0.85rem; font-family: var(--font-sans); font-weight: 500;">Mi Cuenta</span>
-    </li>
-    <li class="nav-item" data-bs-toggle="offcanvas" data-bs-target="#cartDrawer" style="cursor: pointer; background-color: var(--ciruela-oscuro); color: white; padding: 5px 15px; border-radius: 30px;">
-        <i class="bi bi-bag me-2 position-relative">
-            <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="width: 10px; height: 10px; display: none;" id="cart-indicator"></span>
-        </i>
-        <span style="font-size: 0.85rem; font-family: var(--font-sans); font-weight: 500;">Bolsa</span>
-    </li>
-</ul>
-            </div>
-        </div>
-    </nav>
+            this.onMouseDown = this.onMouseDown.bind(this);
+            this.onMouseUp = this.onMouseUp.bind(this);
+            this.onMouseMove = this.onMouseMove.bind(this);
 
-    <header class="hero-container">
-        <div class="hero-text">
-            <h1 class="animate-on-load">Poder <span>Absoluto</span></h1>
-            <p class="mb-5 animate-on-load delay-1" style="max-width: 450px; font-weight: 300; line-height: 1.6;">Forjado en platino, diseñado para la eternidad. Descubre piezas que capturan la luz y dictan sus propias reglas.</p>
-            <div class="animate-on-load delay-2">
-                <a href="#galeria" class="btn-premium">Explorar la Colección</a>
-            </div>
-        </div>
-        <div class="hero-img-box animate-on-load delay-2 d-none d-lg-flex">
-            <img src="Gemini_Generated_Image_zfe1guzfe1guzfe1.png" alt="Anillo" class="img-mimetic" onerror="this.src='https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=600&auto=format&fit=crop'">
-        </div>
-    </header>
+            this.el.sceneEl.addEventListener('loaded', () => {
+                const canvas = this.el.sceneEl.canvas;
+                canvas.addEventListener('mousedown', this.onMouseDown);
+                canvas.addEventListener('mouseup', this.onMouseUp);
+                canvas.addEventListener('mousemove', this.onMouseMove);
+                canvas.addEventListener('mouseleave', this.onMouseUp);
 
-    <section id="galeria" class="py-5 editorial-section">
-        <div class="container">
-            <h2 class="text-center mb-5 font-serif reveal" style="font-size: 3rem;">Colecciones AURA</h2>
-            
-            <ul class="nav nav-tabs justify-content-center border-0 mb-5" id="catalogoTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active text-dark font-weight-bold fs-5 border-0 bg-transparent" id="anillos-tab" data-bs-toggle="tab" data-bs-target="#anillos" type="button" role="tab">Anillos</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link text-dark fs-5 border-0 bg-transparent" id="collares-tab" data-bs-toggle="tab" data-bs-target="#collares" type="button" role="tab">Collares</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link text-dark fs-5 border-0 bg-transparent" id="pulseras-tab" data-bs-toggle="tab" data-bs-target="#pulseras" type="button" role="tab">Pulseras</button>
-                </li>
-            </ul>
-
-            <div class="tab-content" id="catalogoTabsContent">
-                
-                <div class="tab-pane fade show active" id="anillos" role="tabpanel" tabindex="0">
-                    <div class="row g-4">
-                        
-                        <div class="col-lg-3 col-md-4 col-sm-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="1" data-category="anillos" data-price="24500" data-name="Solitario Eternidad">
-                                <div id="carouselAnillo1" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="oro1.png" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="oro2.png" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="oro3.png" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="oro4.png" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselAnillo1" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselAnillo1" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Solitario Eternidad</h5>
-                                    <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 1px;">$ 24,500 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_anillo.glb" onclick="abrirModelo3D('preparacion_anillo.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="1" onclick="agregarAlCarrito(1)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-3 col-md-4 col-sm-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="2" data-category="anillos" data-price="16800" data-name="Crossover Lumina">
-                                <div id="carouselAnillo2" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="anillo mariposa.png" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="anillo mariposa2.png" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="anillo mariposa3.png" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="anillo mariposa4.png" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselAnillo2" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselAnillo2" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Crossover Lumina</h5>
-                                    <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 1px;">$ 16,800 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_anillo.glb" onclick="abrirModelo3D('preparacion_anillo.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="2" onclick="agregarAlCarrito(2)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-3 col-md-4 col-sm-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="3" data-category="anillos" data-price="3200" data-name="Esencia Pura">
-                                <div id="carouselAnillo3" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="puma1.png" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="puma2.png" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="puma3.png" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="puma4.png" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselAnillo3" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselAnillo3" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Esencia Pura</h5>
-                                    <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 1px;">$ 3,200 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_anillo.glb" onclick="abrirModelo3D('preparacion_anillo.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="3" onclick="agregarAlCarrito(3)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-3 col-md-4 col-sm-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="4" data-category="anillos" data-price="12400" data-name="Mariposa Cristal">
-                                <div id="carouselAnillo4" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="blank white.png" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="blank white2.png" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="blank white3.png" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="blank white4.png" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselAnillo4" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselAnillo4" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Mariposa Cristal</h5>
-                                    <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 1px;">$ 12,400 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_anillo.glb" onclick="abrirModelo3D('preparacion_anillo.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="4" onclick="agregarAlCarrito(4)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-3 col-md-4 col-sm-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="5" data-category="anillos" data-price="35000" data-name="Aura Imperial">
-                                <div id="carouselAnillo5" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="anillo_5_render_1.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="anillo_5_render_2.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="anillo_5_render_3.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="anillo_5_render_4.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselAnillo5" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselAnillo5" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Aura Imperial</h5>
-                                    <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 1px;">$ 35,000 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_anillo.glb" onclick="abrirModelo3D('preparacion_anillo.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="5" onclick="agregarAlCarrito(5)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-3 col-md-4 col-sm-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="6" data-category="anillos" data-price="28900" data-name="Zafiro Noche">
-                                <div id="carouselAnillo6" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="compromiso.png" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="compromiso2.png" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselAnillo6" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselAnillo6" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Zafiro Noche</h5>
-                                    <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 1px;">$ 28,900 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_anillo.glb" onclick="abrirModelo3D('preparacion_anillo.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="6" onclick="agregarAlCarrito(6)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-3 col-md-4 col-sm-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="7" data-category="anillos" data-price="19500" data-name="Alianza Platino">
-                                <div id="carouselAnillo7" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="anillo_7_render_1.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="anillo_7_render_2.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="anillo_7_render_3.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="anillo_7_render_4.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselAnillo7" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselAnillo7" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Alianza Platino</h5>
-                                    <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 1px;">$ 19,500 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_anillo.glb" onclick="abrirModelo3D('preparacion_anillo.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="7" onclick="agregarAlCarrito(7)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-3 col-md-4 col-sm-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="8" data-category="anillos" data-price="21000" data-name="Rosa Eterna">
-                                <div id="carouselAnillo8" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="anillo_8_render_1.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="anillo_8_render_2.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="anillo_8_render_3.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="anillo_8_render_4.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 200px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselAnillo8" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselAnillo8" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Rosa Eterna</h5>
-                                    <p class="text-muted" style="font-size: 0.8rem; letter-spacing: 1px;">$ 21,000 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_anillo.glb" onclick="abrirModelo3D('preparacion_anillo.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="8" onclick="agregarAlCarrito(8)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <div class="tab-pane fade" id="collares" role="tabpanel" tabindex="0">
-                    <div class="row g-4">
-                        
-                        <div class="col-lg-4 col-md-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="9" data-category="collares" data-price="45000" data-name="Gargantilla Zafiro">
-                                <div id="carouselCollar1" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="collar.png" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar2.png" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar3.png" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar4.png" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselCollar1" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselCollar1" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Gargantilla Zafiro</h5>
-                                    <p class="text-muted">$ 45,000 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_collar.glb" onclick="abrirModelo3D('preparacion_collar.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="9" onclick="agregarAlCarrito(9)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-lg-4 col-md-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="10" data-category="collares" data-price="32500" data-name="Colgante Lágrima">
-                                <div id="carouselCollar2" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="collar1.1.png" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar1.2.png" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar1.3.png" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselCollar2" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselCollar2" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Colgante Lágrima</h5>
-                                    <p class="text-muted">$ 32,500 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_collar.glb" onclick="abrirModelo3D('preparacion_collar.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="10" onclick="agregarAlCarrito(10)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-4 col-md-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="11" data-category="collares" data-price="18900" data-name="Cadena Veneciana Oro">
-                                <div id="carouselCollar3" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="collar_3_render_1.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar_3_render_2.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar_3_render_3.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar_3_render_4.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselCollar3" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselCollar3" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Cadena Veneciana Oro</h5>
-                                    <p class="text-muted">$ 18,900 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_collar.glb" onclick="abrirModelo3D('preparacion_collar.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="11" onclick="agregarAlCarrito(11)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-4 col-md-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="12" data-category="collares" data-price="27000" data-name="Perla de Tahití">
-                                <div id="carouselCollar4" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="collar_4_render_1.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar_4_render_2.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar_4_render_3.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar_4_render_4.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselCollar4" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselCollar4" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Perla de Tahití</h5>
-                                    <p class="text-muted">$ 27,000 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_collar.glb" onclick="abrirModelo3D('preparacion_collar.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="12" onclick="agregarAlCarrito(12)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-4 col-md-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="13" data-category="collares" data-price="55000" data-name="Cruz de Diamantes">
-                                <div id="carouselCollar5" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="collar_5_render_1.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar_5_render_2.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar_5_render_3.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar_5_render_4.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselCollar5" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselCollar5" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Cruz de Diamantes</h5>
-                                    <p class="text-muted">$ 55,000 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_collar.glb" onclick="abrirModelo3D('preparacion_collar.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="13" onclick="agregarAlCarrito(13)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-4 col-md-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="14" data-category="collares" data-price="89000" data-name="Constelación">
-                                <div id="carouselCollar6" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="collar_6_render_1.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar_6_render_2.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar_6_render_3.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="collar_6_render_4.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselCollar6" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselCollar6" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Constelación</h5>
-                                    <p class="text-muted">$ 89,000 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_collar.glb" onclick="abrirModelo3D('preparacion_collar.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="14" onclick="agregarAlCarrito(14)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <div class="tab-pane fade" id="pulseras" role="tabpanel" tabindex="0">
-                    <div class="row g-4">
-                        
-                        <div class="col-lg-4 col-md-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="15" data-category="pulseras" data-price="22000" data-name="Brazalete Infinito">
-                                <div id="carouselPulsera1" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="pulsera_1_render_1.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_1_render_2.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_1_render_3.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_1_render_4.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselPulsera1" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselPulsera1" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Brazalete Infinito</h5>
-                                    <p class="text-muted">$ 22,000 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_pulsera.glb" onclick="abrirModelo3D('preparacion_pulsera.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="15" onclick="agregarAlCarrito(15)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-4 col-md-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="16" data-category="pulseras" data-price="115000" data-name="Pulsera Riviera (Tenis)">
-                                <div id="carouselPulsera2" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="pulsera_2_render_1.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_2_render_2.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_2_render_3.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_2_render_4.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselPulsera2" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselPulsera2" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Pulsera Riviera (Tenis)</h5>
-                                    <p class="text-muted">$ 115,000 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_pulsera.glb" onclick="abrirModelo3D('preparacion_pulsera.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="16" onclick="agregarAlCarrito(16)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-4 col-md-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="17" data-category="pulseras" data-price="19400" data-name="Esclava Oro 18k">
-                                <div id="carouselPulsera3" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="pulsera_3_render_1.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_3_render_2.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_3_render_3.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_3_render_4.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselPulsera3" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselPulsera3" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Esclava Oro 18k</h5>
-                                    <p class="text-muted">$ 19,400 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_pulsera.glb" onclick="abrirModelo3D('preparacion_pulsera.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="17" onclick="agregarAlCarrito(17)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-4 col-md-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="18" data-category="pulseras" data-price="43000" data-name="Brazalete Felino">
-                                <div id="carouselPulsera4" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="pulsera_4_render_1.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_4_render_2.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_4_render_3.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_4_render_4.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselPulsera4" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselPulsera4" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Brazalete Felino</h5>
-                                    <p class="text-muted">$ 43,000 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_pulsera.glb" onclick="abrirModelo3D('preparacion_pulsera.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="18" onclick="agregarAlCarrito(18)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-4 col-md-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="19" data-category="pulseras" data-price="14000" data-name="Pulsera Charms AURA">
-                                <div id="carouselPulsera5" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="pulsera_5_render_1.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_5_render_2.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_5_render_3.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_5_render_4.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselPulsera5" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselPulsera5" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Pulsera Charms AURA</h5>
-                                    <p class="text-muted">$ 14,000 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_pulsera.glb" onclick="abrirModelo3D('preparacion_pulsera.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="19" onclick="agregarAlCarrito(19)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-4 col-md-6">
-                            <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="20" data-category="pulseras" data-price="26800" data-name="Malla de Oro Rosa">
-                                <div id="carouselPulsera6" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
-                                    <div class="carousel-inner" style="border-radius: 8px;">
-                                        <div class="carousel-item active"><img src="pulsera_6_render_1.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_6_render_2.jpg" onerror="this.src='https://images.unsplash.com/photo-1605100804763?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_6_render_3.jpg" onerror="this.src='https://images.unsplash.com/photo-1599643478524?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                        <div class="carousel-item"><img src="pulsera_6_render_4.jpg" onerror="this.src='https://images.unsplash.com/photo-1611591437281?q=80&w=300'" class="d-block w-100 aura-carousel-img" style="height: 220px; object-fit: contain;"></div>
-                                    </div>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselPulsera6" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#carouselPulsera6" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="font-serif mt-3">Malla de Oro Rosa</h5>
-                                    <p class="text-muted">$ 26,800 MXN</p>
-                                    <div class="mt-auto">
-                                        <button class="btn btn-outline-dark w-100 mb-2 btn-3d" data-glb="preparacion_pulsera.glb" onclick="abrirModelo3D('preparacion_pulsera.glb')"><i class="bi bi-badge-3d"></i> Ver en 3D</button>
-                                        <button class="btn btn-dark w-100 btn-add-cart" data-id="20" onclick="agregarAlCarrito(20)">Añadir al Carrito</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </section>
-
-
-
-    <div class="iris-scroll-wrapper" id="atelier">
-        <div class="iris-sticky-container">
-            <div class="text-center" style="position: absolute; z-index: 0;">
-                <p style="font-family: var(--font-serif); font-size: 1.5rem; color: #aaa; letter-spacing: 4px;">Sigue bajando para descubrir</p>
-            </div>
-            <div class="iris-mask">
-                <div class="container" style="padding: 0 5%;">
-                    <div class="row align-items-center">
-                        <div class="col-lg-5">
-                            <h2 style="font-size: 4.5rem; margin-bottom: 30px; line-height: 0.9; font-family: var(--font-serif);">
-                                El Arte de<br><span style="color: var(--oro-rosa-cenizo); font-style: italic;">Forjar.</span>
-                            </h2>
-                            <p style="font-weight: 300; line-height: 1.8; color: #ccc; margin-bottom: 40px; font-family: var(--font-sans);">
-                                No ensamblamos, esculpimos. Trabajamos exclusivamente con Oro de 18 quilates éticamente extraído y Platino 950 de pureza absoluta. Cada diamante es seleccionado a mano por nuestros gemólogos, asegurando un grado de claridad que desafía la luz.
-                            </p>
-                            <a href="#" style="color: var(--oro-rosa-cenizo); letter-spacing: 4px; text-transform: uppercase; font-size: 0.8rem; text-decoration: none; border-bottom: 1px solid var(--oro-rosa-cenizo); padding-bottom: 5px;">Conoce nuestro manifiesto</a>
-                        </div>
-                        <div class="col-lg-6 offset-lg-1">
-                            <div style="width: 100%; height: 550px; background: url('https://images.unsplash.com/photo-1589128777073-263566ae5e4d?q=80&w=1000&auto=format&fit=crop') center/cover; filter: grayscale(30%) contrast(1.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <footer style="background-color: var(--ciruela-oscuro); color: #fff; padding: 60px 0 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-        <div class="container text-center">
-            <h2 class="font-serif mb-4" style="letter-spacing: 6px;">AURA</h2>
-            <p style="font-size: 0.8rem; letter-spacing: 2px; color: #888; text-transform: uppercase;">Ciudad de México • París • Milán</p>
-        </div>
-    </footer>
-
-    <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content luxury-modal">
-                <div class="modal-header border-0 pb-0">
-                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close" onclick="reiniciarModalLogin()"></button>
-                </div>
-                <div class="modal-body text-center pt-0 px-4 pb-4">
-                    <h2 class="font-serif mb-2" style="font-size: 2.2rem;">Bóveda AURA</h2>
-                    <p class="text-muted mb-4" style="font-size: 0.85rem;" id="auth-subtitle">Accede a tu colección privada.</p>
-                    
-                    <div class="d-flex justify-content-center mb-4" id="auth-toggle-btns">
-                        <button class="btn btn-outline-dark mx-1 fw-bold" id="tab-login" onclick="mostrarSeccion('login')">Iniciar Sesión</button>
-                        <button class="btn btn-outline-dark mx-1 text-muted border-0" id="tab-registro" onclick="mostrarSeccion('registro')">Crear Cuenta</button>
-                    </div>
-
-                    <div id="auth-login-form">
-                        <div class="mb-3 text-start">
-                            <input type="email" id="login-email" class="form-control form-luxury" placeholder="Correo Electrónico">
-                        </div>
-                        <div class="mb-4 text-start">
-                            <input type="password" id="login-password" class="form-control form-luxury" placeholder="Contraseña">
-                        </div>
-                        <button type="button" class="btn-solid" id="btn-login" onclick="procesarLogin()">Entrar</button>
-                    </div>
-
-                    <div id="auth-registro-form" style="display: none;">
-                        <div class="mb-3 text-start">
-                            <input type="text" id="reg-usuario" class="form-control form-luxury" placeholder="Nombre de Usuario">
-                        </div>
-                        <div class="mb-3 text-start">
-                            <input type="tel" id="reg-telefono" class="form-control form-luxury" placeholder="Número de Teléfono">
-                        </div>
-                        <div class="mb-3 text-start">
-                            <input type="email" id="reg-email" class="form-control form-luxury" placeholder="Correo Electrónico">
-                        </div>
-                        <div class="mb-4 text-start">
-                            <input type="password" id="reg-password" class="form-control form-luxury" placeholder="Crear Contraseña">
-                        </div>
-                        <button type="button" class="btn-solid" id="btn-registro" onclick="procesarRegistro()">Registrarse</button>
-                    </div>
-
-                    <div id="auth-paso-2" style="display: none;">
-                        <div class="mb-4 text-start">
-                            <input type="text" id="auth-codigo-input" class="form-control form-luxury text-center" placeholder="Token de 6 dígitos" maxlength="6" style="letter-spacing: 5px; font-size: 1.2rem;">
-                        </div>
-                        <button type="button" class="btn-solid" id="btn-verificar-codigo" onclick="verificarCodigoAcceso()">Verificar Token</button>
-                        <p class="mt-4" style="font-size: 0.8rem;"><a href="#" onclick="reiniciarModalLogin()" style="color: var(--oro-rosa-cenizo); text-decoration: none;">Cancelar</a></p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="offcanvas offcanvas-start" tabindex="-1" id="profileDrawer" aria-labelledby="profileDrawerLabel" data-bs-backdrop="true">
-        <div class="offcanvas-header border-bottom">
-            <h5 class="offcanvas-title font-serif" id="profileDrawerLabel" style="font-size: 1.5rem;">Mi Colección Privada</h5>
-            <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body d-flex flex-column p-4">
-            <div class="mb-4 pb-4 border-bottom">
-                <h6 class="text-uppercase text-muted mb-3" style="letter-spacing: 2px; font-size: 0.75rem;">Datos del Coleccionista</h6>
-                <p class="mb-1 fw-bold font-serif" style="font-size: 1.2rem;" id="perfil-nombre">Cargando...</p>
-                <p class="mb-1 text-muted" style="font-size: 0.9rem;" id="perfil-email">Cargando...</p>
-                <p class="mb-0 text-muted" style="font-size: 0.9rem;" id="perfil-telefono">Cargando...</p>
-            </div>
-            <div class="mb-4 pb-4 border-bottom flex-grow-1">
-                <h6 class="text-uppercase text-muted mb-3" style="letter-spacing: 2px; font-size: 0.75rem;">Adquisiciones y Certificados</h6>
-                <div id="perfil-pedidos-container" style="max-height: 250px; overflow-y: auto;">
-                    <p class="text-muted" style="font-size: 0.9rem; font-style: italic;">Aún no tienes piezas en tu bóveda.</p>
-                </div>
-            </div>
-            <button class="btn btn-outline-danger mt-3 w-100" onclick="cerrarSesionVIP()">Cerrar Bóveda</button>
-        </div>
-    </div>
-
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="cartDrawer" aria-labelledby="cartDrawerLabel" data-bs-backdrop="true">
-        <div class="offcanvas-header border-bottom bg-light">
-            <h5 class="offcanvas-title font-serif" id="cartDrawerLabel" style="font-size: 1.5rem;">Paso 1: Tu Selección</h5>
-            <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body d-flex flex-column p-4">
-            <div id="contenedor-carrito" class="flex-grow-1 mb-4" style="overflow-y: auto;">
-                <div class="text-center mt-5">
-                    <i class="bi bi-bag-x mb-3" style="font-size: 3rem; color: #ccc;"></i>
-                    <p class="text-muted font-serif" style="font-size: 1.2rem;">Tu bolsa está vacía.</p>
-                    <button class="btn-outline-dark btn mt-2" data-bs-dismiss="offcanvas">Ver joyas disponibles</button>
-                </div>
-            </div>
-            <div class="mt-auto pt-4 border-top">
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="text-uppercase text-muted" style="letter-spacing: 2px; font-size: 0.8rem;">Total a Pagar</span>
-                    <span class="fw-bold font-serif" style="font-size: 1.2rem;" id="total-carrito">$ 0 MXN</span>
-                </div>
-
-                <div id="card-element" class="p-3 mb-2" style="background-color: #fcfcfc; border: 1px solid #eaeaea; border-radius: 4px;">
-                    </div>
-                
-                <div id="card-errors" role="alert" style="color: #b76e79; font-size: 0.8rem; margin-bottom: 15px; text-align: center; font-weight: 500;"></div>
-
-                <p style="font-size: 0.75rem; color: #888; text-align: center; margin-bottom: 10px;">🔒 Cifrado de grado militar • PCI DSS</p>
-                
-                <button type="button" class="btn-solid w-100 btn-checkout" id="btn-pagar-stripe" style="padding: 15px; font-size: 1rem; font-weight: bold;">
-                    Asegurar Inversión <i class="bi bi-arrow-right ms-2"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="auraAlertModal" tabindex="-1" aria-hidden="true" style="z-index: 1090;">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content luxury-modal" style="border: 1px solid var(--oro-rosa-cenizo); text-align: center;">
-                <div class="modal-header border-0 pb-0 justify-content-center" style="position: relative;">
-                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; right: 15px; top: 15px;"></button>
-                    <i class="bi bi-gem mb-2 mt-3" id="aura-alert-icon" style="font-size: 2rem; color: var(--oro-rosa-cenizo);"></i>
-                </div>
-                <div class="modal-body px-5 pb-5 pt-2">
-                    <h3 class="font-serif mb-3" id="aura-alert-title" style="font-size: 1.8rem;">Aviso de Bóveda</h3>
-                    <p class="text-muted" id="aura-alert-message" style="font-size: 0.95rem; line-height: 1.6; font-family: var(--font-sans);"></p>
-                    <button type="button" class="btn-solid mt-4" data-bs-dismiss="modal" id="aura-alert-btn">Entendido</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="toast-container position-fixed bottom-0 end-0 p-4" style="z-index: 1095;">
-        <div id="auraToast" class="toast align-items-center border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true" style="background-color: var(--ciruela-oscuro); color: white;">
-            <div class="d-flex">
-                <div class="toast-body font-serif" id="aura-toast-message" style="font-size: 1.1rem; letter-spacing: 1px;">
-                    Notificación AURA.
-                </div>
-                <button type="button" class="btn-close btn-close-white me-3 m-auto shadow-none" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="welcomeGuideModal" tabindex="-1" aria-hidden="true"> 
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content luxury-modal" style="text-align: center; padding: 40px; position: relative;">
-                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close" style="position: absolute; top: 15px; right: 15px;"></button>
-                
-                <h2 class="font-serif mb-3">Bienvenido a AURA</h2>
-                <p class="text-muted mb-4">Para comenzar tu experiencia, elige la pieza que mejor define tu estilo hoy. Te guiaremos en cada paso.</p>
-                
-                <div class="row">
-                    <div class="col-md-4">
-                        <button class="btn btn-outline-dark w-100 mb-2" onclick="seleccionarYGuiar(1)" data-bs-dismiss="modal">Solitario Eternidad</button>
-                    </div>
-                    <div class="col-md-4">
-                        <button class="btn btn-outline-dark w-100 mb-2" onclick="seleccionarYGuiar(2)" data-bs-dismiss="modal">Crossover Lumina</button>
-                    </div>
-                    <div class="col-md-4">
-                        <button class="btn btn-outline-dark w-100 mb-2" onclick="seleccionarYGuiar(3)" data-bs-dismiss="modal">Esencia Pura</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const scenes = document.querySelectorAll('a-scene');
-            
-            const observerOptions = {
-                root: null,
-                rootMargin: '0px',
-                threshold: 0.1 
-            };
-
-            const sceneObserver = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    const scene = entry.target;
-                    if (entry.isIntersecting) {
-                        scene.play(); 
-                    } else {
-                        scene.pause(); 
-                    }
-                });
-            }, observerOptions);
-
-            scenes.forEach(scene => {
-                if (scene.hasLoaded) {
-                    sceneObserver.observe(scene);
-                } else {
-                    scene.addEventListener('loaded', () => sceneObserver.observe(scene));
-                }
+                canvas.addEventListener('touchstart', this.onMouseDown, {passive: false});
+                canvas.addEventListener('touchend', this.onMouseUp);
+                canvas.addEventListener('touchmove', this.onMouseMove, {passive: false});
             });
+        },
+        onMouseDown: function (event) {
+            this.ifMouseDown = true;
+            this.x_cord = event.clientX || (event.touches ? event.touches[0].clientX : 0);
+            this.y_cord = event.clientY || (event.touches ? event.touches[0].clientY : 0);
+        },
+        onMouseUp: function () {
+            this.ifMouseDown = false;
+        },
+        onMouseMove: function (event) {
+            if (this.ifMouseDown) {
+                let temp_x = event.clientX || (event.touches ? event.touches[0].clientX : 0);
+                let temp_y = event.clientY || (event.touches ? event.touches[0].clientY : 0);
+                let x_temp = temp_x - this.x_cord;
+                let y_temp = temp_y - this.y_cord;
 
-            const tomas = [
-                { rotacion: "10 0 0",   distancia: "0 0 5.0" },
-                { rotacion: "20 45 0",  distancia: "0 0 4.5" },
-                { rotacion: "40 -30 0", distancia: "0 0 4.8" },
-                { rotacion: "-5 -15 0", distancia: "0 0 5.2" }
-            ];
-            let tomaActual = 0;
+                this.el.object3D.rotation.y += x_temp * this.data.speed / 100;
+                this.el.object3D.rotation.x += y_temp * this.data.speed / 100;
 
-            setInterval(() => {
-                tomaActual = (tomaActual + 1) % tomas.length;
-                const toma = tomas[tomaActual];
-                
-                const activeRigs = document.querySelectorAll('a-scene:not(.a-hidden) .rig-camara');
-                const activeLentes = document.querySelectorAll('a-scene:not(.a-hidden) .lente-camara');
-                
-                activeRigs.forEach(rig => rig.setAttribute('rotation', toma.rotacion));
-                activeLentes.forEach(lente => lente.setAttribute('position', toma.distancia));
-            }, 5000);
+                this.x_cord = temp_x;
+                this.y_cord = temp_y;
+            }
+        }
+    });
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    /* =========================================================
+       1. SCROLL REVEAL (Galería)
+       ========================================================= */
+    const reveals = document.querySelectorAll('.reveal');
+    const revealObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('active');
+                observer.unobserve(entry.target); 
+            }
         });
-    </script>
-    <div class="modal fade" id="visor3DModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content shadow-lg border-0">
-                <div class="modal-header bg-dark text-light border-0">
-                    <h5 class="modal-title font-serif">Visor 3D Interactivo</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick="limpiarVisor3D()"></button>
+    }, { threshold: 0.15, rootMargin: "0px 0px -50px 0px" });
+
+    reveals.forEach(reveal => revealObserver.observe(reveal));
+
+
+    /* =========================================================
+       2. STICKY SCROLL IRIS OPTIMIZADO
+       ========================================================= */
+    const irisWrapper = document.querySelector('.iris-scroll-wrapper');
+    const irisMask = document.querySelector('.iris-mask');
+
+    if (irisWrapper && irisMask) {
+        let ticking = false;
+
+        const handleIrisScroll = () => {
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    const rect = irisWrapper.getBoundingClientRect();
+                    let progress = 0;
+                    
+                    if (rect.top <= 0) {
+                        progress = Math.abs(rect.top) / (rect.height - window.innerHeight);
+                    }
+                    progress = Math.max(0, Math.min(1, progress));
+
+                    if (progress > 0 && progress < 1) {
+                        irisMask.classList.add('is-opening');
+                    } else {
+                        irisMask.classList.remove('is-opening');
+                    }
+
+                    const circleSize = progress * 150; 
+                    irisMask.style.clipPath = `circle(${circleSize}% at 50% 50%)`;
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        };
+
+        const irisIntersectionObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                window.addEventListener('scroll', handleIrisScroll, { passive: true });
+            } else {
+                window.removeEventListener('scroll', handleIrisScroll);
+            }
+        });
+
+        irisIntersectionObserver.observe(irisWrapper);
+    }
+
+
+    /* =========================================================
+       3. RECEPTOR DE ADUANA VIP (Actualizado a Tokenización)
+       ========================================================= */
+    const parametrosURL = new URLSearchParams(window.location.search);
+    const estatusTransaccion = parametrosURL.get('transaccion');
+
+    if (estatusTransaccion === 'cancelada') {
+        mostrarToastVIP("Transacción pausada. Tu selección seguirá reservada en bóveda.");
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    actualizarUI();
+    
+    // Disparar modal de bienvenida si no se ha mostrado
+    if (!localStorage.getItem("welcomeModalShown")) {
+        const welcomeModal = new bootstrap.Modal(document.getElementById('welcomeGuideModal'));
+        welcomeModal.show();
+        localStorage.setItem("welcomeModalShown", "true");
+    }
+});
+
+
+/* =========================================================
+   4. CONTROLADORES DE ALERTAS Y TOASTS
+   ========================================================= */
+function mostrarAlertaVIP(titulo, mensaje, icono = 'bi-gem') {
+    document.getElementById('aura-alert-title').innerText = titulo;
+    document.getElementById('aura-alert-message').innerText = mensaje;
+    
+    const iconElement = document.getElementById('aura-alert-icon');
+    iconElement.className = `bi ${icono} mb-2 mt-3`;
+    iconElement.style.fontSize = '2.5rem';
+    iconElement.style.color = 'var(--oro-rosa-cenizo)';
+
+    const alertModal = new bootstrap.Modal(document.getElementById('auraAlertModal'));
+    alertModal.show();
+}
+
+function mostrarToastVIP(mensaje) {
+    document.getElementById('aura-toast-message').innerText = mensaje;
+    const toastEl = document.getElementById('auraToast');
+    const toast = new bootstrap.Toast(toastEl, { delay: 4500 });
+    toast.show();
+}
+
+
+/* =========================================================
+   5. CATÁLOGO COMPLETO Y SISTEMA DE CARRITO DE COMPRAS VIP
+   ========================================================= */
+const catalogoJoyas = {
+    // Anillos
+    1: { nombre: "Solitario Eternidad", precio: 24500, imagen: "oro1.png" },
+    2: { nombre: "Crossover Lumina", precio: 16800, imagen: "anillo mariposa.png" },
+    3: { nombre: "Esencia Pura", precio: 3200, imagen: "puma1.png" },
+    4: { nombre: "Mariposa Cristal", precio: 12400, imagen: "anillo_4_render_1.jpg" },
+    5: { nombre: "Aura Imperial", precio: 35000, imagen: "anillo_5_render_1.jpg" },
+    6: { nombre: "Zafiro Noche", precio: 28900, imagen: "anillo_6_render_1.jpg" },
+    7: { nombre: "Alianza Platino", precio: 19500, imagen: "anillo_7_render_1.jpg" },
+    8: { nombre: "Rosa Eterna", precio: 21000, imagen: "anillo_8_render_1.jpg" },
+    
+    // Collares
+    9: { nombre: "Gargantilla Zafiro", precio: 45000, imagen: "collar_1_render_1.jpg" },
+    10: { nombre: "Colgante Lágrima", precio: 32500, imagen: "collar_2_render_1.jpg" },
+    11: { nombre: "Cadena Veneciana Oro", precio: 18900, imagen: "collar_3_render_1.jpg" },
+    12: { nombre: "Perla de Tahití", precio: 27000, imagen: "collar_4_render_1.jpg" },
+    13: { nombre: "Cruz de Diamantes", precio: 55000, imagen: "collar_5_render_1.jpg" },
+    14: { nombre: "Constelación", precio: 89000, imagen: "collar_6_render_1.jpg" },
+    
+    // Pulseras
+    15: { nombre: "Brazalete Infinito", precio: 22000, imagen: "pulsera_1_render_1.jpg" },
+    16: { nombre: "Pulsera Riviera (Tenis)", precio: 115000, imagen: "pulsera_2_render_1.jpg" },
+    17: { nombre: "Esclava Oro 18k", precio: 19400, imagen: "pulsera_3_render_1.jpg" },
+    18: { nombre: "Brazalete Felino", precio: 43000, imagen: "pulsera_4_render_1.jpg" },
+    19: { nombre: "Pulsera Charms AURA", precio: 14000, imagen: "pulsera_5_render_1.jpg" },
+    20: { nombre: "Malla de Oro Rosa", precio: 26800, imagen: "pulsera_6_render_1.jpg" }
+};
+
+let carritoCrudo = JSON.parse(localStorage.getItem('carritoAura')) || [];
+let carrito = carritoCrudo.filter(item => item.joya_id !== null && typeof item.joya_id !== 'object');
+
+function actualizarUI() {
+    const contenedor = document.getElementById('contenedor-carrito');
+    const totalElement = document.getElementById('total-carrito');
+    const indicador = document.getElementById('cart-indicator');
+
+    if (carrito.length === 0) {
+        contenedor.innerHTML = `<div class="text-center mt-5"><p class="text-muted font-serif" style="font-size: 1.2rem; font-style: italic;">Tu reserva está vacía.</p></div>`;
+        totalElement.innerText = "$ 0 MXN";
+        indicador.style.display = 'none';
+        return;
+    }
+
+    let htmlCarrito = '';
+    let total = 0;
+    let cantidadTotalPiezas = 0;
+
+    carrito.forEach((item, index) => {
+        const joya = catalogoJoyas[item.joya_id];
+        if (joya) {
+            const subtotal = joya.precio * item.cantidad;
+            total += subtotal;
+            cantidadTotalPiezas += item.cantidad;
+
+            htmlCarrito += `
+                <div class="cart-item d-flex align-items-center mb-4" style="border-bottom: 1px solid #eee; padding-bottom: 15px;">
+                    <img src="${joya.imagen}" alt="${joya.nombre}" loading="lazy" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px; margin-right: 15px;">
+                    <div class="cart-item-details flex-grow-1">
+                        <h6 class="cart-item-title font-serif mb-1" style="font-size: 1.1rem;">${joya.nombre}</h6>
+                        <p class="mb-1 text-muted" style="font-size: 0.8rem;">Cantidad: ${item.cantidad}</p>
+                        <p class="fw-medium mb-0" style="font-size: 0.9rem;">$ ${subtotal.toLocaleString()} MXN</p>
+                    </div>
+                    <button class="btn btn-sm" onclick="eliminarDelCarrito(${index})" style="background: none; border: none; color: var(--ciruela-oscuro); font-size: 1.2rem;">
+                        <i class="bi bi-x-circle"></i>
+                    </button>
                 </div>
-                <div class="modal-body p-0 bg-light" id="contenedorEscena3D" style="height: 60vh; position: relative;">
-                </div>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
+            `;
+        }
+    });
+
+    contenedor.innerHTML = htmlCarrito;
+    totalElement.innerText = `$ ${total.toLocaleString()} MXN`;
+    
+    indicador.innerText = cantidadTotalPiezas;
+    indicador.style.display = 'flex';
+    indicador.style.alignItems = 'center';
+    indicador.style.justifyContent = 'center';
+    indicador.style.fontSize = '9px';
+    indicador.style.color = 'white';
+}
+
+function agregarAlCarrito(idJoya, cantidad = 1) {
+    if (carrito.length > 0 && carrito[0].joya_id !== idJoya) {
+        mostrarToastVIP("Por protocolos de seguridad en tu certificado, procesa la compra de una pieza a la vez. Vacía tu bolsa primero.");
+        return;
+    }
+    
+    const itemExistente = carrito.find(item => item.joya_id === idJoya);
+    if (itemExistente) {
+        itemExistente.cantidad += cantidad;
+    } else {
+        carrito.push({ joya_id: idJoya, cantidad: cantidad });
+    }
+    
+    localStorage.setItem('carritoAura', JSON.stringify(carrito));
+    actualizarUI();
+    
+    const cartOffcanvas = new bootstrap.Offcanvas(document.getElementById('cartDrawer'));
+    cartOffcanvas.show();
+    
+    mostrarToastVIP("💎 Pieza añadida a tu selección.");
+}
+
+function eliminarDelCarrito(index) {
+    carrito.splice(index, 1);
+    localStorage.setItem('carritoAura', JSON.stringify(carrito));
+    actualizarUI(); 
+}
+
+async function procesarCheckoutCarrito() {
+    if (carrito.length === 0) {
+        mostrarToastVIP("Tu selección está vacía. Explora nuestro Atelier primero.");
+        return;
+    }
+
+    const usuarioActivo = localStorage.getItem('auraVIP_User');
+    if (!usuarioActivo) {
+        mostrarAlertaVIP(
+            "Autenticación Requerida", 
+            "Por protocolos de seguridad, es obligatorio iniciar sesión en nuestra bóveda antes de procesar una inversión.",
+            "bi-shield-lock"
+        );
+        
+        const cartElement = document.getElementById('cartDrawer');
+        const cartOffcanvas = bootstrap.Offcanvas.getInstance(cartElement);
+        if (cartOffcanvas) cartOffcanvas.hide();
+        
+        setTimeout(() => {
+            const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+            loginModal.show();
+        }, 500);
+        return;
+    }
+
+    // SIMULADOR TEMPORAL DE TOKEN DE TARJETA (Reemplazar luego con Stripe Elements en HTML)
+    const tokenSimulado = prompt("Seguridad Bóveda: Ingresa el Token seguro de Stripe (Escribe 'tok_visa' para simular un pago exitoso):", "tok_visa");
+    
+    if (!tokenSimulado) {
+        mostrarToastVIP("Operación cancelada. Se requiere una validación de pago.");
+        return;
+    }
+
+    const boton = document.querySelector('.btn-checkout');
+    if (boton) {
+        boton.innerText = "Asegurando colección...";
+        boton.disabled = true;
+    }
+
+    try {
+        const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/procesar-pago-seguro', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                email: usuarioActivo, 
+                items: carrito,
+                token: tokenSimulado
+            })
+        });
+
+        const datos = await respuesta.json();
+
+        if (respuesta.status === 200) {
+            localStorage.removeItem('carritoAura'); 
+            carrito = []; 
+            actualizarUI(); 
+            
+            // Cerrar panel lateral
+            const cartElement = document.getElementById('cartDrawer');
+            const cartOffcanvas = bootstrap.Offcanvas.getInstance(cartElement);
+            if (cartOffcanvas) cartOffcanvas.hide();
+
+            // Mostrar Alerta de Éxito y abrir Perfil
+            mostrarAlertaVIP("Inversión Asegurada", "Tu adquisición ha sido capturada por la Bóveda Central. Estamos generando tu Recibo de Transacción y tu Certificado de Autenticidad...", "bi-shield-check");
+            
+            setTimeout(() => {
+                gestionarAccesoPerfil(); // Abre el perfil para ver el PDF
+            }, 2500);
+
+        } else {
+            mostrarAlertaVIP("Transacción Declinada", datos.mensaje || datos.error || "Hubo un error en la bóveda.", "bi-x-circle");
+        }
+    } catch (error) {
+        mostrarToastVIP("Error: No se pudo contactar con el taller central.");
+    } finally {
+        if (boton) { 
+            boton.innerHTML = 'Paso 2: Pagar ahora <i class="bi bi-arrow-right ms-2"></i>'; 
+            boton.disabled = false; 
+        }
+    }
+}
+
+
+/* =========================================================
+   6. VISOR 3D (Renderizado desde el HTML)
+   ========================================================= */
+function abrirModelo3D(modeloGlb) {
+    const contenedor = document.getElementById('contenedorEscena3D');
+    
+    contenedor.innerHTML = `
+        <a-scene embedded vr-mode-ui="enabled: false" background="color: #f4f4f4">
+            <a-assets>
+                <a-asset-item id="modeloJoya" src="${modeloGlb}"></a-asset-item>
+            </a-assets>
+            
+            <a-entity gltf-model="#modeloJoya" 
+                      position="0 0 -3" 
+                      scale="1.5 1.5 1.5" 
+                      drag-rotate-component>
+                <a-animation attribute="rotation" to="0 360 0" dur="15000" repeat="indefinite" easing="linear"></a-animation>
+            </a-entity>
+            
+            <a-camera position="0 0 0" look-controls="enabled: false" wasd-controls="enabled: false"></a-camera>
+            <a-light type="ambient" color="#ffffff" intensity="0.8"></a-light>
+            <a-light type="directional" color="#ffffff" intensity="0.6" position="-1 2 1"></a-light>
+        </a-scene>
+    `;
+    
+    const visorModal = new bootstrap.Modal(document.getElementById('visor3DModal'));
+    visorModal.show();
+}
+
+function limpiarVisor3D() {
+    const contenedor = document.getElementById('contenedorEscena3D');
+    contenedor.innerHTML = ''; 
+}
+
+
+/* =========================================================
+   7. SISTEMA DE AUTENTICACIÓN (Login / Registro + 2FA)
+   ========================================================= */
+let correoTemporal = ""; 
+
+function mostrarSeccion(seccion) {
+    const isLogin = seccion === 'login';
+    document.getElementById('auth-login-form').style.display = isLogin ? 'block' : 'none';
+    document.getElementById('auth-registro-form').style.display = isLogin ? 'none' : 'block';
+    
+    document.getElementById('tab-login').className = isLogin ? "btn btn-outline-dark mx-1 fw-bold" : "btn btn-outline-dark mx-1 text-muted border-0";
+    document.getElementById('tab-registro').className = !isLogin ? "btn btn-outline-dark mx-1 fw-bold" : "btn btn-outline-dark mx-1 text-muted border-0";
+    document.getElementById('auth-subtitle').innerText = isLogin ? "Accede a tu colección privada." : "Únete al círculo exclusivo de coleccionistas.";
+}
+
+async function procesarRegistro() {
+    const usuario = document.getElementById('reg-usuario').value.trim();
+    const telefono = document.getElementById('reg-telefono').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value.trim();
+    const btn = document.getElementById('btn-registro');
+
+    if (!usuario || !telefono || !email.includes('@') || password.length < 4) {
+        mostrarToastVIP("Por favor, llena todos los campos correctamente.");
+        return;
+    }
+
+    btn.innerText = "Creando cuenta..."; btn.disabled = true;
+
+    try {
+        const res = await fetch('https://joyeria-aura-42ax.onrender.com/api/crear-cuenta', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usuario, telefono, email, password })
+        });
+        const data = await res.json();
+
+        if (res.status === 200) {
+            correoTemporal = email;
+            transicionA2FA("Hemos enviado un token de verificación a tu correo.");
+            mostrarToastVIP("✉️ Token enviado con éxito.");
+        } else {
+            mostrarToastVIP("Aviso: " + data.mensaje);
+        }
+    } catch (error) {
+        mostrarToastVIP("Error de conexión con la bóveda.");
+    } finally {
+        btn.innerText = "Registrarse"; btn.disabled = false;
+    }
+}
+
+async function procesarLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+    const btn = document.getElementById('btn-login');
+
+    if (!email.includes('@') || !password) {
+        mostrarToastVIP("Por favor, ingresa tu correo y contraseña.");
+        return;
+    }
+
+    btn.innerText = "Verificando..."; btn.disabled = true;
+
+    try {
+        const res = await fetch('https://joyeria-aura-42ax.onrender.com/api/iniciar-sesion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+
+        if (res.status === 200) {
+            correoTemporal = email;
+            transicionA2FA("Seguridad de Bóveda: Ingresa el token enviado a tu correo para acceder.");
+            mostrarToastVIP("✉️ Token de seguridad enviado.");
+        } else {
+            mostrarToastVIP(data.mensaje);
+        }
+    } catch (error) {
+        mostrarToastVIP("Error de conexión.");
+    } finally {
+        btn.innerText = "Entrar"; btn.disabled = false;
+    }
+}
+
+function transicionA2FA(mensaje) {
+    document.getElementById('auth-toggle-btns').style.display = 'none';
+    document.getElementById('auth-login-form').style.display = 'none';
+    document.getElementById('auth-registro-form').style.display = 'none';
+    document.getElementById('auth-paso-2').style.display = 'block';
+    document.getElementById('auth-subtitle').innerText = mensaje;
+}
+
+async function verificarCodigoAcceso() {
+    const codigo = document.getElementById('auth-codigo-input').value.trim();
+    const btn = document.getElementById('btn-verificar-codigo');
+
+    if (codigo.length < 5) {
+        mostrarToastVIP("Ingresa el token completo.");
+        return;
+    }
+
+    btn.innerText = "Validando..."; btn.disabled = true;
+
+    try {
+        const res = await fetch('https://joyeria-aura-42ax.onrender.com/api/verificar-codigo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: correoTemporal, codigo })
+        });
+        const data = await res.json();
+
+        if (res.status === 200) {
+            localStorage.setItem('auraVIP_User', data.email); 
+            
+            const modalInstance = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+            if (modalInstance) modalInstance.hide();
+            
+            mostrarAlertaVIP(
+                "Acceso Concedido", 
+                `Bienvenido de vuelta a tu colección privada, ${data.usuario || data.email}.`, 
+                "bi-unlock"
+            );
+            
+            reiniciarModalLogin();
+            gestionarAccesoPerfil(); 
+        } else {
+            mostrarToastVIP("Error: " + data.mensaje);
+        }
+    } catch (error) {
+        mostrarToastVIP("Error de conexión.");
+    } finally {
+        btn.innerText = "Verificar Token"; btn.disabled = false;
+    }
+}
+
+function reiniciarModalLogin() {
+    document.getElementById('auth-toggle-btns').style.display = 'flex';
+    document.getElementById('auth-paso-2').style.display = 'none';
+    mostrarSeccion('login'); 
+    
+    document.getElementById('auth-codigo-input').value = "";
+    document.getElementById('login-email').value = "";
+    document.getElementById('login-password').value = "";
+    document.getElementById('reg-usuario').value = "";
+    document.getElementById('reg-telefono').value = "";
+    document.getElementById('reg-email').value = "";
+    document.getElementById('reg-password').value = "";
+    
+    correoTemporal = "";
+}
+
+
+/* =========================================================
+   8. MI BÓVEDA (Gestión del Panel de Perfil y Descargas)
+   ========================================================= */
+function gestionarAccesoPerfil() {
+    const usuarioActivo = localStorage.getItem('auraVIP_User');
+    
+    if (!usuarioActivo) {
+        const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+        loginModal.show();
+    } else {
+        const profileOffcanvas = new bootstrap.Offcanvas(document.getElementById('profileDrawer'));
+        profileOffcanvas.show();
+        cargarDatosPerfil(usuarioActivo);
+    }
+}
+
+async function cargarDatosPerfil(emailUsuario) {
+    document.getElementById('perfil-email').innerText = emailUsuario;
+    document.getElementById('perfil-nombre').innerText = "Cargando datos...";
+    document.getElementById('perfil-telefono').innerText = "Cargando...";
+    document.getElementById('perfil-pedidos-container').innerHTML = '<p class="text-muted" style="font-size: 0.9rem; font-style: italic;">Conectando con la bóveda central...</p>';
+
+    try {
+        const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/perfil-usuario', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: emailUsuario })
+        });
+
+        if (respuesta.status === 200) {
+            const datos = await respuesta.json();
+            document.getElementById('perfil-nombre').innerText = datos.usuario || "Coleccionista VIP";
+            document.getElementById('perfil-telefono').innerText = datos.telefono || "Teléfono no registrado";
+            
+            const contenedorPedidos = document.getElementById('perfil-pedidos-container');
+            
+            if (datos.pedidos && datos.pedidos.length > 0) {
+                let htmlPedidos = '';
+                datos.pedidos.forEach(pedido => {
+                    
+                    let botonDescarga = '';
+                    if (pedido.estado === 'PAGADO') {
+                        botonDescarga = `
+                        <div class="mt-2 text-end">
+                            <a href="https://joyeria-aura-42ax.onrender.com/api/descargar-certificado/${pedido.id_orden}" 
+                               target="_blank"
+                               class="btn btn-sm" 
+                               style="font-size: 0.75rem; letter-spacing: 1px; color: var(--oro-rosa-cenizo); border: 1px solid var(--oro-rosa-cenizo); border-radius: 4px; text-decoration: none; padding: 4px 10px; transition: all 0.3s ease;">
+                               <i class="bi bi-file-earmark-pdf me-1"></i> Obtener Certificado
+                            </a>
+                        </div>`;
+                    }
+
+                    htmlPedidos += `
+                        <div class="mb-3 p-3" style="background-color: #fcfcfc; border-radius: 8px; border-left: 3px solid var(--oro-rosa-cenizo); box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
+                            <p class="mb-1 fw-bold font-serif" style="font-size: 1rem;">${pedido.nombre_joya}</p>
+                            <p class="mb-1 text-muted" style="font-size: 0.8rem;">Folio: ${pedido.id_orden.substring(0,8)}...</p>
+                            <p class="mb-1 text-muted" style="font-size: 0.8rem;">Fecha: ${new Date(pedido.fecha).toLocaleDateString()}</p>
+                            <span class="badge ${pedido.estado === 'PAGADO' ? 'bg-success' : 'bg-warning text-dark'}" style="font-size: 0.7rem; letter-spacing: 1px;">
+                                ${pedido.estado === 'PAGADO' ? 'ASEGURADO' : 'PENDIENTE DE PAGO'}
+                            </span>
+                            ${botonDescarga}
+                        </div>
+                    `;
+                });
+                contenedorPedidos.innerHTML = htmlPedidos;
+            } else {
+                contenedorPedidos.innerHTML = '<p class="text-muted" style="font-size: 0.9rem; font-style: italic;">Aún no tienes piezas en tu bóveda.</p>';
+            }
+        } else {
+            document.getElementById('perfil-nombre').innerText = "Error de conexión";
+            document.getElementById('perfil-pedidos-container').innerHTML = '<p class="text-danger" style="font-size: 0.9rem;">No pudimos sincronizar tu perfil.</p>';
+        }
+    } catch (error) {
+        document.getElementById('perfil-nombre').innerText = "Modo Sin Conexión";
+        document.getElementById('perfil-pedidos-container').innerHTML = '<p class="text-muted" style="font-size: 0.9rem;">Revisa tu conexión a internet.</p>';
+    }
+}
+
+function cerrarSesionVIP() {
+    localStorage.removeItem('auraVIP_User');
+    
+    const profileElement = document.getElementById('profileDrawer');
+    const profileOffcanvas = bootstrap.Offcanvas.getInstance(profileElement);
+    if(profileOffcanvas) profileOffcanvas.hide();
+    
+    mostrarToastVIP("🔒 Bóveda cerrada. Hasta pronto.");
+}
+
+function seleccionarYGuiar(idJoya) {
+    agregarAlCarrito(idJoya);
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('welcomeGuideModal'));
+    if(modal) modal.hide();
+    
+    document.getElementById('galeria').scrollIntoView({ behavior: 'smooth' });
+    
+    mostrarToastVIP("Excelente elección. Hemos reservado tu pieza en tu bolsa.");
+}
