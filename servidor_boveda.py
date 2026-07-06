@@ -1,6 +1,6 @@
 # ==========================================
 # @author: Maximiliano Cabello
-# Proyecto: AURA Alta Joyería - Servidor Central (Producción PCI-DSS)
+# Proyecto: AURA Alta Joyería - Servidor Central (Stripe Producción)
 # ==========================================
 
 import os
@@ -23,7 +23,6 @@ from fpdf import FPDF
 load_dotenv()
 
 app = Flask(__name__)
-# Configuración global de CORS para permitir todas las solicitudes del frontend
 CORS(app)
 
 # Configuración de Supabase y Stripe
@@ -322,10 +321,6 @@ def perfil_usuario():
 
 @app.route('/api/procesar-pago-seguro', methods=['POST', 'OPTIONS'])
 def procesar_pago_seguro():
-    """ 
-    Endpoint que recibe el Token seguro del frontend sin salir de la página.
-    Genera el cargo y registra la orden en Supabase.
-    """
     if request.method == 'OPTIONS':
         return jsonify({}), 200
 
@@ -333,16 +328,14 @@ def procesar_pago_seguro():
         data = request.json
         email = data.get('email')
         items = data.get('items', [])
-        token_stripe = data.get('token') # El token criptográfico (ej. tok_1J2...)
+        token_stripe = data.get('token')
 
         if not items or not token_stripe:
             return jsonify({"mensaje": "Datos de compra incompletos"}), 400
 
-        # Identificar usuario
         res_user = boveda.table('usuarios_vip').select('id').eq('email', email).execute()
         usuario_uuid = res_user.data[0]['id'] if res_user.data else None
 
-        # Calcular el costo total estrictamente desde la Base de Datos (Seguridad)
         monto_total_centavos = 0
         cantidad_total = 0
         
@@ -352,12 +345,18 @@ def procesar_pago_seguro():
             
             res_joya = boveda.table('joyas_stock').select('precio_centavos').eq('id', joya_id).execute()
             if res_joya.data:
-                monto_total_centavos += int(float(res_joya.data[0]['precio_centavos']) * 100 * cantidad)
+                # --- PARCHE DE PRECIO APLICADO AQUÍ ---
+                # Esto transforma los "15" pesos de Supabase en "1500" centavos para Stripe automáticamente
+                precio_base_db = float(res_joya.data[0]['precio_centavos'])
+                monto_total_centavos += int(precio_base_db * 100 * cantidad)
                 cantidad_total += cantidad
+
+        # Seguridad de la Pasarela: Evitar que se envíen menos de 10 pesos
+        if monto_total_centavos < 1000:
+             return jsonify({"mensaje": "Por seguridad bancaria, la inversión mínima es de $10.00 MXN."}), 400
 
         primer_joya_id = int(items[0]['joya_id'])
 
-        # Procesar el cargo con Stripe usando el token
         cargo = stripe.Charge.create(
             amount=monto_total_centavos,
             currency="mxn",
@@ -365,25 +364,22 @@ def procesar_pago_seguro():
             description=f"Inversión AURA - Usuario: {email}"
         )
 
-        # Registrar la orden pagada en la bóveda
         res_orden = boveda.table('ordenes_compra').insert({
             'usuario_email': email,
             'usuario_id': usuario_uuid,
             'joya_id': primer_joya_id, 
             'cantidad': cantidad_total,
             'monto_total_centavos': monto_total_centavos,
-            'estado': 'PAGADO', # El pago se confirmó en la línea anterior
+            'estado': 'PAGADO', 
             'stripe_charge_id': cargo.id
         }).execute()
         
         orden_uuid = res_orden.data[0]['id']
 
-        # Extraer datos visuales para los correos
         res_joya = boveda.table('joyas_stock').select('nombre').eq('id', primer_joya_id).execute()
         nombre_joya = res_joya.data[0]['nombre']
         precio_formateado = f"{(monto_total_centavos / 100.0):,.2f}"
 
-        # Disparar correos
         enviar_ticket_compra_html(email, nombre_joya, orden_uuid, precio_formateado)
         enviar_certificado_html(email, nombre_joya, orden_uuid)
 
@@ -394,8 +390,10 @@ def procesar_pago_seguro():
         }), 200
 
     except stripe.error.CardError as e:
-        # La tarjeta fue declinada (sin fondos, vencida, etc.)
         return jsonify({"mensaje": "La tarjeta fue declinada.", "detalle": str(e)}), 402
+    except stripe.error.StripeError as e:
+        # Esto atrapará errores como tokens inválidos o problemas de red con la pasarela
+        return jsonify({"mensaje": "Error en la pasarela de pagos.", "detalle": str(e)}), 400
     except Exception as e:
         print(f"❌ [ERROR PROCESAR PAGO]: {traceback.format_exc()}")
         return jsonify({"mensaje": "Error interno en el procesamiento"}), 500
@@ -403,35 +401,24 @@ def procesar_pago_seguro():
 
 @app.route('/api/webhook/stripe', methods=['POST'])
 def webhook_stripe():
-    """
-    Ruta de seguridad (SCA/PCI). Stripe se comunica directamente con este endpoint
-    para notificar eventos asíncronos (como reembolsos o pagos completados que tardan).
-    """
     payload = request.data
     sig_header = request.headers.get('Stripe-Signature')
 
     try:
-        # Validación de la firma criptográfica oficial de Stripe
         event = stripe.Webhook.construct_event(
             payload, sig_header, STRIPE_WEBHOOK_SECRET
         )
     except ValueError as e:
-        # Payload inválido
         return jsonify({"error": "Payload invalido"}), 400
     except stripe.error.SignatureVerificationError as e:
-        # Firma inválida (Intento de ataque)
         return jsonify({"error": "Firma invalida"}), 400
 
-    # Lógica de telemetría y auditoría en base a eventos de Stripe
     if event['type'] == 'charge.succeeded':
         charge = event['data']['object']
-        # Aquí puedes implementar una validación secundaria en Supabase o
-        # enviar datos de analytics (groupby) para tus registros de ingresos.
         print(f"✅ [WEBHOOK AUDIT]: Cargo {charge['id']} verificado exitosamente.")
         
     elif event['type'] == 'charge.refunded':
         charge = event['data']['object']
-        # Si reembolsas la compra de prueba desde el dashboard de Stripe
         boveda.table('ordenes_compra').update({"estado": "REEMBOLSADO"}).eq('stripe_charge_id', charge['id']).execute()
         print(f"⚠️ [WEBHOOK AUDIT]: Cargo {charge['id']} reembolsado.")
 
