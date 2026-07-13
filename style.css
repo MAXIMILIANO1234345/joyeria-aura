@@ -1,289 +1,401 @@
-:root {
-    /* 1. PALETA BASE */
-    --nude-seda: #e8e6e1; 
-    --ciruela-oscuro: #2C1E22; 
-    --oro-rosa-cenizo: #DDA7A5; 
+/* =========================================
+   AURA | ALTA JOYERÍA - CSS CORE
+   Minimalista, Intuitivo, Responsive
+========================================= */
 
-    /* 2. SISTEMA TIPOGRÁFICO */
+:root {
+    /* Paleta de Lujo */
+    --ciruela-oscuro: #2A1B24;
+    --oro-rosa-cenizo: #D4AF37; /* Tono oro elegante */
+    --oro-rosa-hover: #B5952F;
+    --bg-light: #FAFAFA;
+    --blanco-puro: #FFFFFF;
+    --texto-principal: #1A1A1A;
+    --texto-secundario: #666666;
+    
+    /* Tipografías */
     --font-serif: 'Cormorant Garamond', serif;
     --font-sans: 'Jost', sans-serif;
-
-    /* 3. FÍSICA DE MOVIMIENTO CENTRALIZADA */
-    --ease-cartier: cubic-bezier(0.16, 1, 0.3, 1);
-    --ease-revelado: cubic-bezier(0.2, 0.8, 0.2, 1);
+    
+    /* Sombras y Bordes */
+    --sombra-suave: 0 10px 30px rgba(0, 0, 0, 0.05);
+    --sombra-fuerte: 0 15px 40px rgba(42, 27, 36, 0.15);
+    --borde-fino: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 /* =========================================
-   1. CONFIGURACIÓN DEL MOTOR DE RENDERIZADO
-   ========================================= */
-html {
-    scroll-behavior: smooth;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-
-body {
-    background-color: var(--nude-seda);
-    color: var(--ciruela-oscuro);
+   RESETEO Y BASE
+========================================= */
+body, html {
+    margin: 0;
+    padding: 0;
     font-family: var(--font-sans);
-    letter-spacing: 0.5px;
+    background-color: var(--bg-light);
+    color: var(--texto-principal);
+    scroll-behavior: smooth;
     overflow-x: hidden;
 }
 
-::selection {
-    background-color: var(--oro-rosa-cenizo);
+h1, h2, h3, h4, h5, .font-serif {
+    font-family: var(--font-serif);
+    font-weight: 500;
+}
+
+/* =========================================
+   NAVEGACIÓN (GLASSMORPHISM MÁS CLARO)
+========================================= */
+.navbar-glass {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: var(--borde-fino);
+    padding: 15px 0;
+    transition: all 0.3s ease;
+}
+
+.brand-logo {
+    font-family: var(--font-serif);
+    font-size: 2rem;
+    font-weight: 500;
+    letter-spacing: 6px;
+    color: var(--texto-principal);
+    text-decoration: none;
+    text-transform: uppercase;
+}
+
+.brand-logo:hover {
+    color: var(--oro-rosa-cenizo);
+}
+
+.nav-link-custom {
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--texto-secundario);
+    text-decoration: none;
+    padding: 10px 15px;
+    transition: color 0.3s ease;
+}
+
+.nav-link-custom:hover {
     color: var(--ciruela-oscuro);
 }
 
-h1, h2, h3, h4, h5, .brand-logo, .font-serif {
-    font-family: var(--font-serif);
-    font-weight: 400;
-    /* OptimizeLegibility solo en títulos para no frenar la lectura del texto general */
-    text-rendering: optimizeLegibility; 
-}
-
 /* =========================================
-   2. ANIMACIONES GLOBALES (Aceleradas por GPU)
-   ========================================= */
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translate3d(0, 40px, 0); }
-    to { opacity: 1; transform: translate3d(0, 0, 0); }
+   HERO SECTION (ADAPTADA A MÓVIL)
+========================================= */
+.hero-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 100px 5% 50px;
+    background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+    position: relative;
+    overflow: hidden;
 }
 
-.animate-on-load { 
-    animation: fadeInUp 1.5s var(--ease-revelado) forwards; 
-    opacity: 0; 
-    /* Avisa al navegador que esto cambiará para pre-asignar memoria GPU */
-    will-change: transform, opacity; 
-}
-.delay-1 { animation-delay: 0.3s; }
-.delay-2 { animation-delay: 0.6s; }
-
-@keyframes floating {
-    0%, 100% { transform: translate3d(0, 0, 0); }
-    50% { transform: translate3d(0, -12px, 0); }
+.hero-text {
+    flex: 1;
+    z-index: 2;
 }
 
-.reveal { 
-    opacity: 0; 
-    transform: translate3d(0, 60px, 0); 
-    transition: opacity 1.2s var(--ease-revelado), transform 1.2s var(--ease-revelado); 
-    will-change: transform, opacity;
-}
-.reveal.active { opacity: 1; transform: translate3d(0, 0, 0); }
-
-/* =========================================
-   3. NAVEGACIÓN
-   ========================================= */
-.navbar-glass {
-    background: rgba(232, 230, 225, 0.75);
-    /* Optimización: Backdrop filter es MUY pesado. Usar transform hack para aislarlo */
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(44, 30, 34, 0.06);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-    padding: 18px 0;
-    transition: padding 0.5s var(--ease-cartier), background 0.5s ease;
-    transform: translateZ(0); 
+.hero-text h1 {
+    font-size: 5.5rem;
+    line-height: 1;
+    margin-bottom: 20px;
+    color: var(--ciruela-oscuro);
 }
 
-.brand-logo { 
-    font-size: 2.4rem; 
-    letter-spacing: 8px; 
-    color: var(--ciruela-oscuro); 
-    text-decoration: none; 
+.hero-text h1 span {
+    color: var(--oro-rosa-cenizo);
+    font-style: italic;
 }
 
-.nav-link-custom { 
-    font-size: 0.75rem; 
-    text-transform: uppercase; 
-    letter-spacing: 2.5px; 
-    color: var(--ciruela-oscuro); 
-    margin: 0 15px; 
-    text-decoration: none; 
+.hero-text p {
+    font-size: 1.2rem;
+    color: var(--texto-secundario);
+}
+
+.hero-img-box {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     position: relative;
 }
-.nav-link-custom::after { 
-    content: ''; 
-    position: absolute; 
-    width: 0; 
-    height: 1px; 
-    bottom: -4px; 
-    left: 50%; 
-    background-color: var(--oro-rosa-cenizo); 
-    transition: width 0.4s var(--ease-cartier); 
-    transform: translateX(-50%); 
-}
-.nav-link-custom:hover::after { width: 100%; }
 
-.nav-icons i { 
-    font-size: 1.15rem; 
-    margin-left: 25px; 
-    cursor: pointer; 
-    transition: transform 0.3s var(--ease-cartier), color 0.3s ease; 
-    will-change: transform;
-}
-.nav-icons i:hover { 
-    color: var(--oro-rosa-cenizo); 
-    transform: scale(1.15) translateZ(0); 
-}
-
-/* =========================================
-   4. HERO SECTION
-   ========================================= */
-.hero-container { min-height: 100vh; display: flex; align-items: center; padding: 0 5%; position: relative; }
-.hero-text { flex: 1; z-index: 2; padding-right: 40px; }
-.hero-text h1 { font-size: 6rem; line-height: 0.95; margin-bottom: 30px; }
-.hero-text h1 span { display: block; font-style: italic; color: var(--oro-rosa-cenizo); padding-left: 50px; }
-
-.hero-img-box { flex: 1.2; display: flex; justify-content: center; align-items: center; position: relative; }
 .img-mimetic {
-    width: 100%;
-    max-width: 800px;
-    /* CUIDADO: mix-blend-mode junto con animación es letal para el rendimiento. 
-       Se optimiza limitando el renderizado estricto al elemento */
-    mix-blend-mode: darken; 
-    animation: floating 6s ease-in-out infinite;
-    filter: contrast(1.05) brightness(0.98);
-    will-change: transform;
+    max-width: 100%;
+    height: auto;
+    max-height: 80vh;
+    object-fit: contain;
+    filter: drop-shadow(0 20px 40px rgba(0,0,0,0.15));
 }
 
+/* =========================================
+   BOTONES (GRANDES Y FÁCILES DE TOCAR)
+========================================= */
 .btn-premium {
-    display: inline-block; padding: 14px 35px; background: transparent; border: 1px solid var(--ciruela-oscuro);
-    color: var(--ciruela-oscuro); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 3px;
-    text-decoration: none; position: relative; overflow: hidden; z-index: 1; transition: color 0.4s ease;
+    display: inline-block;
+    background-color: var(--ciruela-oscuro);
+    color: var(--blanco-puro);
+    padding: 16px 40px;
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 0; /* Bordes rectos, muy alta costura */
+    transition: all 0.3s ease;
+    border: 1px solid var(--ciruela-oscuro);
 }
-.btn-premium::before {
-    content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
-    background: var(--ciruela-oscuro); transition: left 0.5s var(--ease-cartier); z-index: -1;
-    will-change: left;
+
+.btn-premium:hover {
+    background-color: var(--blanco-puro);
+    color: var(--ciruela-oscuro);
 }
-.btn-premium:hover { color: var(--nude-seda); }
-.btn-premium:hover::before { left: 0; }
+
+.btn-solid {
+    background-color: var(--ciruela-oscuro);
+    color: var(--blanco-puro);
+    border: none;
+    padding: 15px 20px;
+    font-size: 1rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    width: 100%;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.btn-solid:hover {
+    background-color: var(--oro-rosa-cenizo);
+}
+
+.btn-add-cart {
+    background-color: var(--texto-principal);
+    color: var(--blanco-puro);
+    border-radius: 4px;
+    padding: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.85rem;
+    transition: all 0.3s;
+}
+
+.btn-add-cart:hover {
+    background-color: var(--oro-rosa-cenizo);
+    border-color: var(--oro-rosa-cenizo);
+}
+
+.btn-3d {
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    color: var(--texto-principal);
+    border-color: rgba(0,0,0,0.2);
+}
 
 /* =========================================
-   5. GALERÍA CORREGIDA
-   ========================================= */
-.editorial-section { padding: 100px 0 150px; }
-.img-container { background: transparent; overflow: hidden; position: relative; margin-bottom: 25px; transform: translateZ(0); }
-
-.img-container img { 
-    width: 100%; 
-    aspect-ratio: 4 / 5;
-    object-fit: cover;
-    transition: transform 1.5s var(--ease-cartier); 
-    mix-blend-mode: darken; 
-    will-change: transform;
+   CATÁLOGO Y TARJETAS (DUMMY-PROOF)
+========================================= */
+.editorial-section {
+    background-color: var(--blanco-puro);
 }
-.product-card:hover .img-container img { transform: scale(1.06) translateZ(0); }
+
+.product-card {
+    background: var(--blanco-puro);
+    border: var(--borde-fino) !important;
+    border-radius: 12px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--sombra-fuerte) !important;
+}
+
+.product-card h5 {
+    font-size: 1.4rem;
+    color: var(--ciruela-oscuro);
+    margin-bottom: 5px;
+}
+
+/* Pestañas (Tabs) amigables */
+.nav-tabs .nav-link {
+    color: var(--texto-secundario) !important;
+    border-bottom: 2px solid transparent !important;
+    padding-bottom: 10px;
+    transition: all 0.3s;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--ciruela-oscuro) !important;
+    border-bottom: 2px solid var(--ciruela-oscuro) !important;
+    font-weight: 500;
+}
 
 /* =========================================
-   6. ATELIER (EFECTO IRIS STICKY)
-   ========================================= */
-.iris-scroll-wrapper { position: relative; height: 250vh; background-color: var(--nude-seda); }
-.iris-sticky-container { position: sticky; top: 0; height: 100vh; width: 100%; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+   FORMULARIOS Y MODALES DE LUJO
+========================================= */
+.luxury-modal {
+    border-radius: 0;
+    border: none;
+    box-shadow: var(--sombra-fuerte);
+}
+
+.form-luxury {
+    border: none;
+    border-bottom: 1px solid #ccc;
+    border-radius: 0;
+    padding: 12px 0;
+    font-size: 1rem;
+    box-shadow: none !important;
+    background-color: transparent;
+}
+
+.form-luxury:focus {
+    border-bottom-color: var(--oro-rosa-cenizo);
+    outline: none;
+}
+
+/* =========================================
+   EFECTOS SCROLL (ATELIER)
+========================================= */
+.iris-scroll-wrapper {
+    position: relative;
+    height: 100vh;
+    background-color: var(--ciruela-oscuro);
+    color: var(--blanco-puro);
+    overflow: hidden;
+}
+
+.iris-sticky-container {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .iris-mask {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--ciruela-oscuro); color: var(--nude-seda);
-    clip-path: circle(0% at 50% 50%); display: flex; align-items: center; z-index: 10;
-    transform: translateZ(0); 
-    will-change: clip-path; /* Optimización estricta para este efecto complejo */
+    width: 100%;
+    z-index: 1;
 }
-.iris-mask::before {
-    content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: 100%; height: 100%; border: 2px solid rgba(221, 167, 165, 0.4); border-radius: 50%;
-    pointer-events: none; opacity: 0; transition: opacity 0.3s;
-}
-.iris-mask.is-opening::before { opacity: 1; }
 
 /* =========================================
-   7. MODAL DE LOGIN LUXURY
-   ========================================= */
-.modal-backdrop.show { opacity: 0.75; backdrop-filter: blur(8px); background-color: var(--ciruela-oscuro); transform: translateZ(0); }
-.modal-content.luxury-modal { background-color: var(--nude-seda); border: none; border-radius: 0; padding: 40px; box-shadow: 0 25px 60px rgba(0,0,0,0.25); }
-.form-luxury { background: transparent; border: none; border-bottom: 1px solid rgba(44, 30, 34, 0.25); border-radius: 0; padding: 15px 0; font-family: var(--font-sans); font-size: 0.9rem; color: var(--ciruela-oscuro); box-shadow: none !important; transition: border-color 0.3s; }
-.form-luxury:focus { border-bottom-color: var(--oro-rosa-cenizo); }
-.form-luxury::placeholder { color: rgba(44, 30, 34, 0.35); letter-spacing: 1.5px; text-transform: uppercase; font-size: 0.7rem; }
-.btn-solid { background: var(--ciruela-oscuro); color: var(--nude-seda); padding: 15px 35px; text-transform: uppercase; letter-spacing: 3px; font-size: 0.75rem; border: 1px solid var(--ciruela-oscuro); transition: transform 0.4s var(--ease-cartier), background 0.3s, color 0.3s; width: 100%; will-change: transform; }
-.btn-solid:hover { background: var(--oro-rosa-cenizo); border-color: var(--oro-rosa-cenizo); color: var(--ciruela-oscuro); transform: translateY(-2px); }
-
-/* =========================================
-   8. CARRITO OFFCANVAS
-   ========================================= */
-.offcanvas-end { width: 450px; background: #fdfbf9; border-left: 1px solid rgba(44, 30, 34, 0.06); }
-.offcanvas-header { padding: 40px 40px 20px; border-bottom: 1px solid rgba(44, 30, 34, 0.08); }
-.offcanvas-title { font-size: 2rem; letter-spacing: 2px; }
-.cart-item { display: flex; align-items: center; padding: 25px 40px; border-bottom: 1px solid rgba(44, 30, 34, 0.05); transition: background 0.3s; }
-.cart-item:hover { background: rgba(221, 167, 165, 0.08); }
-.cart-item img { width: 90px; height: 90px; object-fit: cover; }
-.cart-item-details { margin-left: 25px; }
-.btn-checkout { background: var(--ciruela-oscuro); color: var(--nude-seda); padding: 18px; width: calc(100% - 80px); margin: 20px 40px; text-transform: uppercase; letter-spacing: 3px; border: none; transition: background 0.4s; }
-.btn-checkout:hover { background: var(--oro-rosa-cenizo); color: var(--ciruela-oscuro); }
-
-/* =========================================
-   9. OVERLAY INMERSIVO (SHOWROOM VIP)
-   ========================================= */
-/* Uso de ID para aumentar la especificidad y evitar el pesado uso de !important */
-#immersive-product-view {
-    position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
-    background-color: var(--nude-seda);
-    z-index: 2000;
+   ANIMACIONES BÁSICAS
+========================================= */
+.animate-on-load {
     opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.5s ease-in-out;
-    will-change: opacity;
-}
-#immersive-product-view.active {
-    pointer-events: auto;
-    opacity: 1;
+    animation: fadeInUp 1s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
 }
 
-#immersive-product-view .btn-close-immersive {
-    position: absolute; top: 30px; right: 40px;
-    background: none; border: none;
-    color: var(--ciruela-oscuro); 
-    font-size: 2.5rem; z-index: 2010; cursor: pointer;
-    transition: transform 0.4s ease, color 0.3s ease;
-    will-change: transform;
-}
-#immersive-product-view .btn-close-immersive:hover { transform: rotate(90deg); color: var(--oro-rosa-cenizo); }
+.delay-1 { animation-delay: 0.2s; }
+.delay-2 { animation-delay: 0.4s; }
 
-#immersive-product-view .immersive-details {
-    background-color: var(--nude-seda); 
-    box-shadow: -15px 0 40px rgba(0,0,0,0.04); 
-    z-index: 10; overflow-y: auto;
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-#immersive-product-view .immersive-details h2 { color: var(--ciruela-oscuro); }
-#immersive-product-view p#immersive-story { color: rgba(44, 30, 34, 0.75); }
-
-#immersive-product-view .specifications-box {
-    background: rgba(255, 255, 255, 0.6);
-    border: 1px solid rgba(44, 30, 34, 0.08);
-}
-#immersive-product-view .specifications-box span.font-serif,
-#immersive-product-view #immersive-purity, 
-#immersive-product-view #immersive-method, 
-#immersive-product-view #immersive-size { color: var(--ciruela-oscuro); }
-#immersive-product-view .specifications-box span#immersive-price { color: var(--oro-rosa-cenizo); font-weight: 500; }
-
-#immersive-3d-container { background: radial-gradient(circle at center, #ffffff 0%, var(--nude-seda) 100%); }
-
+/* =========================================
+   ADAPTACIÓN MÓVIL (RESPONSIVE EXTREMO)
+========================================= */
 @media (max-width: 991px) {
-    #immersive-product-view .row { flex-direction: column; }
-    #immersive-3d-container { height: 50vh; }
-    #immersive-product-view .immersive-details { height: 50vh; padding: 30px; }
-    #immersive-product-view .btn-close-immersive { top: 15px; right: 20px; font-size: 2rem; }
-}
+    
+    /* Navegación Móvil */
+    .brand-logo {
+        position: static !important;
+        transform: none !important;
+        margin-right: auto;
+        font-size: 1.5rem;
+    }
+    
+    .nav-icons {
+        flex-direction: row !important;
+    }
+    
+    .nav-icons .nav-item {
+        margin-bottom: 0;
+    }
+    
+    .nav-icons span {
+        display: none; /* Ocultar texto "Mi cuenta" y "Bolsa", dejar solo iconos grandes */
+    }
+    
+    .nav-icons i {
+        font-size: 1.3rem; /* Iconos más grandes y fáciles de tocar */
+        margin-right: 0 !important;
+    }
 
-/* ===================================================
-   ESCUDO DE ACCESIBILIDAD PRO
-   =================================================== */
-@media (prefers-reduced-motion: reduce) {
-    *, ::before, ::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
+    /* Hero Móvil */
+    .hero-container {
+        padding: 120px 20px 40px;
+        text-align: center;
+    }
+
+    .hero-text h1 {
+        font-size: 3.5rem;
+    }
+
+    .hero-text p {
+        font-size: 1rem;
+        margin: 0 auto 30px;
+    }
+
+    .btn-premium {
+        width: 100%; /* Botón gigante en móvil */
+        padding: 18px 20px;
+    }
+
+    /* Catálogo Móvil (Deslizable) */
+    .nav-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        justify-content: flex-start !important;
+        padding-bottom: 5px;
+        -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+    }
+
+    .nav-tabs::-webkit-scrollbar {
+        display: none; /* Ocultar barra de scroll para estética limpia */
+    }
+
+    .nav-tabs .nav-link {
+        white-space: nowrap;
+        font-size: 1.2rem !important;
+        padding: 10px 20px;
+    }
+
+    /* Tarjetas Móvil */
+    .product-card {
+        padding: 20px !important;
+    }
+    
+    .btn-add-cart, .btn-3d {
+        padding: 15px; /* Áreas táctiles más grandes para dedos */
+        font-size: 0.95rem;
+    }
+
+    /* Atelier Móvil */
+    .iris-mask h2 {
+        font-size: 3rem !important;
+        text-align: center;
+        margin-top: 30px;
+    }
+    
+    .iris-mask p {
+        text-align: center;
+    }
+    
+    .iris-mask .col-lg-6 {
+        display: none; /* Ocultamos la imagen pesada en móvil para ir directo al texto */
     }
 }
