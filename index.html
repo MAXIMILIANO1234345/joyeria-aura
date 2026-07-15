@@ -20,7 +20,13 @@
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
 
-      gtag('config', 'G-M7PVDXR98P');
+      // [ADECUACIÓN GA4]: Rastrear al usuario en todos sus dispositivos si inició sesión
+      const usuarioActivo = localStorage.getItem('auraVIP_User');
+      if (usuarioActivo) {
+          gtag('config', 'G-M7PVDXR98P', { 'user_id': usuarioActivo });
+      } else {
+          gtag('config', 'G-M7PVDXR98P');
+      }
     </script>
     
     <link rel="stylesheet" href="style.css">
@@ -95,11 +101,9 @@
 
             <div class="tab-content" id="catalogoTabsContent">
                 
-                <!-- SECCIÓN ANILLOS -->
                 <div class="tab-pane fade show active" id="anillos" role="tabpanel" tabindex="0">
                     <div class="row g-4 justify-content-center">
                         
-                        <!-- Producto 1: Solitario Eternidad -->
                         <div class="col-lg-3 col-md-4 col-sm-6">
                             <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="1" data-category="anillos" data-price="24500" data-name="Solitario Eternidad">
                                 <div id="carouselAnillo1" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
@@ -123,7 +127,6 @@
                             </div>
                         </div>
 
-                        <!-- Producto 3: Esencia Pura (Pantera) -->
                         <div class="col-lg-3 col-md-4 col-sm-6">
                             <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="3" data-category="anillos" data-price="3200" data-name="Esencia Pura">
                                 <div id="carouselAnillo3" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
@@ -147,7 +150,6 @@
                             </div>
                         </div>
 
-                        <!-- Producto 4: Mariposa Cristal -->
                         <div class="col-lg-3 col-md-4 col-sm-6">
                             <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="4" data-category="anillos" data-price="12400" data-name="Mariposa Cristal">
                                 <div id="carouselAnillo4" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
@@ -171,7 +173,6 @@
                             </div>
                         </div>
 
-                        <!-- Producto 6: Zafiro Noche -->
                         <div class="col-lg-3 col-md-4 col-sm-6">
                             <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="6" data-category="anillos" data-price="28900" data-name="Zafiro Noche">
                                 <div id="carouselAnillo6" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
@@ -193,7 +194,6 @@
                             </div>
                         </div>
 
-                        <!-- Producto 7: Alianza Platino -->
                         <div class="col-lg-3 col-md-4 col-sm-6">
                             <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="7" data-category="anillos" data-price="19500" data-name="Alianza Platino">
                                 <div id="carouselAnillo7" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
@@ -219,11 +219,9 @@
                     </div>
                 </div>
 
-                <!-- SECCIÓN COLLARES -->
                 <div class="tab-pane fade" id="collares" role="tabpanel" tabindex="0">
                     <div class="row g-4 justify-content-center">
                         
-                        <!-- Producto 9: Gargantilla Zafiro -->
                         <div class="col-lg-4 col-md-6">
                             <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="9" data-category="collares" data-price="45000" data-name="Gargantilla Zafiro">
                                 <div id="carouselCollar1" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
@@ -247,7 +245,6 @@
                             </div>
                         </div>
                         
-                        <!-- Producto 10: Colgante Lágrima -->
                         <div class="col-lg-4 col-md-6">
                             <div class="card h-100 border-0 shadow-sm text-center p-3 product-card" data-product-id="10" data-category="collares" data-price="32500" data-name="Colgante Lágrima">
                                 <div id="carouselCollar2" class="carousel carousel-dark slide carousel-fade" data-bs-ride="carousel">
@@ -532,7 +529,6 @@
         </div>
     </div>
 
-    <!-- ECOSISTEMA DE ANALÍTICA AVANZADA GA4 - AURA -->
     <script>
       document.addEventListener("DOMContentLoaded", () => {
           // 1. Navegación por Categorías (Tabs)
@@ -658,6 +654,86 @@
           });
           const atelierSection = document.getElementById('atelier');
           if(atelierSection) observer.observe(atelierSection);
+      });
+      
+      /* =========================================================
+         MOTOR DE TELEMETRÍA Y SENSORES AVANZADOS GA4 (Inyectado)
+         ========================================================= */
+      class AuraTelemetryEngine {
+          static init() {
+              this.maxScroll = 0;
+              this.trackPerformance();
+              this.trackScrollDepth();
+              this.trackRageClicks();
+              this.updateHistoricalData();
+          }
+      
+          // 1. Sensor de Rendimiento (Velocidad de carga real)
+          static trackPerformance() {
+              window.addEventListener("load", () => {
+                  setTimeout(() => {
+                      let t = window.performance.timing;
+                      let cargaMs = t.loadEventEnd - t.navigationStart;
+                      if (typeof gtag === 'function' && cargaMs > 0) {
+                          gtag('event', 'performance_metric', { 
+                              name: 'page_load_time', 
+                              value: cargaMs,
+                              event_category: 'Web Vitals'
+                          });
+                      }
+                  }, 0);
+              });
+          }
+      
+          // 2. Sensor de Profundidad (Mide el verdadero interés en tu narrativa)
+          static trackScrollDepth() {
+              document.addEventListener('scroll', () => {
+                  let alto = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                  if (alto <= 0) return;
+                  
+                  let pct = Math.round((window.scrollY / alto) * 100);
+                  [25, 50, 75, 100].forEach(hito => {
+                      if (pct >= hito && this.maxScroll < hito) {
+                          this.maxScroll = hito;
+                          if (typeof gtag === 'function') {
+                              gtag('event', 'scroll_depth_reached', { depth_percentage: hito });
+                          }
+                      }
+                  });
+              }, { passive: true });
+          }
+      
+          // 3. Sensor de Frustración de Interfaz (Rage Clicks)
+          static trackRageClicks() {
+              document.body.addEventListener('click', (e) => {
+                  let esInteractivo = e.target.closest('button, a, input, [role="button"], .carousel-control-prev, .carousel-control-next, .nav-item');
+                  if (!esInteractivo && typeof gtag === 'function') {
+                      gtag('event', 'dead_click', {
+                          element_tag: e.target.tagName,
+                          x_pos: e.clientX,
+                          y_pos: e.clientY
+                      });
+                  }
+              });
+          }
+      
+          // 4. Datos Históricos del Usuario (LTV simulado y lealtad)
+          static updateHistoricalData() {
+              let perfil = JSON.parse(localStorage.getItem('Aura_PerfilHistorico')) || { visitas: 0, ltv: 0 };
+              perfil.visitas += 1;
+              localStorage.setItem('Aura_PerfilHistorico', JSON.stringify(perfil));
+      
+              if (typeof gtag === 'function') {
+                  gtag('set', 'user_properties', {
+                      'visitas_historicas': perfil.visitas,
+                      'cliente_tipo': perfil.visitas > 3 ? 'Recurrente' : 'Nuevo'
+                  });
+              }
+          }
+      }
+      
+      document.addEventListener("DOMContentLoaded", () => {
+          AuraTelemetryEngine.init();
       });
     </script>
 </body>
