@@ -1,656 +1,494 @@
-/* =========================================================
-   --- MOTOR DE TOKENIZACIÓN STRIPE ---
-   ========================================================= */
-const stripePublic = typeof Stripe !== 'undefined' ? Stripe('pk_live_51TpaQ5RxCocxj1aEaSwfY8eKItAEkPXDLQB3yyxoxSBtNspMyYMcuEeOgOWR2zDL9FdxJNyzmtNAcmzuJvTJxF8E00KkTp2vUA') : null;
-let cardElement = null;
+# ==========================================
+# @author: Maximiliano Cabello
+# Proyecto: AURA Alta Joyería - Servidor Central (Stripe Producción)
+# ==========================================
 
-if (stripePublic) {
-    const elements = stripePublic.elements();
-    const style = {
-        base: {
-            color: '#222222',
-            fontFamily: '"Jost", sans-serif',
-            fontSmoothing: 'antialiased',
-            fontSize: '15px',
-            '::placeholder': { color: '#aab7c4' }
-        },
-        invalid: {
-            color: '#b76e79', 
-            iconColor: '#b76e79'
-        }
-    };
-    cardElement = elements.create('card', {style: style, hidePostalCode: true});
-}
+import os
+import smtplib
+import traceback
+import random
+import io
+import stripe
+from datetime import datetime, timedelta, timezone
+from flask import Flask, request, jsonify, send_file
+from flask_cors import CORS
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from supabase import create_client
+from dotenv import load_dotenv
+from werkzeug.security import generate_password_hash, check_password_hash
+from fpdf import FPDF
 
-document.addEventListener('DOMContentLoaded', () => {
+# Cargar variables de entorno
+load_dotenv()
 
-    /* 1. Inyección de Stripe en el DOM */
-    if (cardElement) {
-        const cardContainer = document.getElementById('card-element');
-        if (cardContainer) {
-            cardElement.mount('#card-element');
+app = Flask(__name__)
+CORS(app)
+
+# Configuración de Supabase y Stripe
+boveda = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SECRET_KEY"))
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+
+# ==========================================
+# MOTORES DE CORREO (SMTP)
+# ==========================================
+
+def enviar_ticket_compra_html(destinatario, nombre_pieza, uuid_orden, precio_mxn):
+    remitente = os.getenv("EMAIL_TALLER")
+    password = os.getenv("EMAIL_PASSWORD")
+    
+    msg = MIMEMultipart()
+    msg['From'] = f"AURA Alta Joyería <{remitente}>"
+    msg['To'] = destinatario
+    msg['Subject'] = f"Recibo de Inversión - Orden {str(uuid_orden)[:8]}"
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Jost:wght@300;400&display=swap" rel="stylesheet">
+    </head>
+    <body style="font-family: 'Jost', sans-serif; background-color: #fafafa; padding: 30px 15px; margin: 0;">
+        <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; padding: 40px; border: 1px solid #eeeeee;">
+            <h1 style="font-family: 'Cormorant Garamond', serif; font-size: 24px; color: #111; letter-spacing: 4px; text-align: center; margin-bottom: 5px;">AURA</h1>
+            <p style="text-align: center; font-size: 10px; letter-spacing: 2px; color: #999; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 15px;">Recibo de Transaccion</p>
             
-            cardElement.on('change', function(event) {
-                const displayError = document.getElementById('card-errors');
-                if (event.error) {
-                    displayError.textContent = event.error.message;
-                } else {
-                    displayError.textContent = '';
-                }
-            });
-        }
-    }
-
-    const btnPagar = document.getElementById('btn-pagar-stripe');
-    if (btnPagar) {
-        btnPagar.addEventListener('click', procesarCheckoutCarrito);
-    }
-
-    /* 2. SCROLL REVEAL (Galería) */
-    const reveals = document.querySelectorAll('.reveal');
-    const revealObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('active');
-                observer.unobserve(entry.target); 
-            }
-        });
-    }, { threshold: 0.15, rootMargin: "0px 0px -50px 0px" });
-
-    reveals.forEach(reveal => revealObserver.observe(reveal));
-
-    /* 3. STICKY SCROLL IRIS OPTIMIZADO */
-    const irisWrapper = document.querySelector('.iris-scroll-wrapper');
-    const irisMask = document.querySelector('.iris-mask');
-
-    if (irisWrapper && irisMask) {
-        let ticking = false;
-
-        const handleIrisScroll = () => {
-            if (!ticking) {
-                window.requestAnimationFrame(() => {
-                    const rect = irisWrapper.getBoundingClientRect();
-                    let progress = 0;
-                    
-                    if (rect.top <= 0) {
-                        progress = Math.abs(rect.top) / (rect.height - window.innerHeight);
-                    }
-                    progress = Math.max(0, Math.min(1, progress));
-
-                    if (progress > 0 && progress < 1) {
-                        irisMask.classList.add('is-opening');
-                    } else {
-                        irisMask.classList.remove('is-opening');
-                    }
-
-                    const circleSize = progress * 150; 
-                    irisMask.style.clipPath = `circle(${circleSize}% at 50% 50%)`;
-                    ticking = false;
-                });
-                ticking = true;
-            }
-        };
-
-        const irisIntersectionObserver = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting) {
-                window.addEventListener('scroll', handleIrisScroll, { passive: true });
-            } else {
-                window.removeEventListener('scroll', handleIrisScroll);
-            }
-        });
-
-        irisIntersectionObserver.observe(irisWrapper);
-    }
-
-    /* 4. LIMPIEZA DE RUTAS */
-    const parametrosURL = new URLSearchParams(window.location.search);
-    const estatusTransaccion = parametrosURL.get('transaccion');
-
-    if (estatusTransaccion === 'cancelada') {
-        mostrarToastVIP("Transacción pausada. Tu selección seguirá reservada en bóveda.");
-        window.history.replaceState({}, document.title, window.location.pathname);
-    }
-
-    actualizarUI();
-    
-    // Disparar modal de bienvenida
-    if (!localStorage.getItem("welcomeModalShown")) {
-        const welcomeModal = new bootstrap.Modal(document.getElementById('welcomeGuideModal'));
-        welcomeModal.show();
-        localStorage.setItem("welcomeModalShown", "true");
-    }
-});
-
-/* =========================================================
-   CONTROLADORES DE ALERTAS Y TOASTS
-   ========================================================= */
-function mostrarAlertaVIP(titulo, mensaje, icono = 'bi-gem') {
-    document.getElementById('aura-alert-title').innerText = titulo;
-    document.getElementById('aura-alert-message').innerText = mensaje;
-    
-    const iconElement = document.getElementById('aura-alert-icon');
-    iconElement.className = `bi ${icono} mb-2 mt-3`;
-    iconElement.style.fontSize = '2.5rem';
-    iconElement.style.color = 'var(--oro-rosa-cenizo)';
-
-    const alertModal = new bootstrap.Modal(document.getElementById('auraAlertModal'));
-    alertModal.show();
-}
-
-function mostrarToastVIP(mensaje) {
-    document.getElementById('aura-toast-message').innerText = mensaje;
-    const toastEl = document.getElementById('auraToast');
-    const toast = new bootstrap.Toast(toastEl, { delay: 4500 });
-    toast.show();
-}
-
-/* =========================================================
-   CATÁLOGO COMPLETO Y SISTEMA DE CARRITO DE COMPRAS VIP
-   ========================================================= */
-const catalogoJoyas = {
-    // Anillos
-    1: { nombre: "Solitario Eternidad", precio: 24500, imagen: "oro1.png" },
-    2: { nombre: "Crossover Lumina", precio: 16800, imagen: "anillo mariposa.png" },
-    3: { nombre: "Esencia Pura", precio: 3200, imagen: "puma1.png" },
-    4: { nombre: "Mariposa Cristal", precio: 12400, imagen: "anillo_4_render_1.jpg" },
-    5: { nombre: "Aura Imperial", precio: 35000, imagen: "anillo_5_render_1.jpg" },
-    6: { nombre: "Zafiro Noche", precio: 28900, imagen: "anillo_6_render_1.jpg" },
-    7: { nombre: "Alianza Platino", precio: 19500, imagen: "anillo_7_render_1.jpg" },
-    8: { nombre: "Rosa Eterna", precio: 21000, imagen: "anillo_8_render_1.jpg" },
-    
-    // Collares
-    9: { nombre: "Gargantilla Zafiro", precio: 45000, imagen: "collar_1_render_1.jpg" },
-    10: { nombre: "Colgante Lágrima", precio: 32500, imagen: "collar_2_render_1.jpg" },
-    11: { nombre: "Cadena Veneciana Oro", precio: 18900, imagen: "collar_3_render_1.jpg" },
-    12: { nombre: "Perla de Tahití", precio: 27000, imagen: "collar_4_render_1.jpg" },
-    13: { nombre: "Cruz de Diamantes", precio: 55000, imagen: "collar_5_render_1.jpg" },
-    14: { nombre: "Constelación", precio: 89000, imagen: "collar_6_render_1.jpg" },
-    
-    // Pulseras
-    15: { nombre: "Brazalete Infinito", precio: 22000, imagen: "pulsera_1_render_1.jpg" },
-    16: { nombre: "Pulsera Riviera (Tenis)", precio: 115000, imagen: "pulsera_2_render_1.jpg" },
-    17: { nombre: "Esclava Oro 18k", precio: 19400, imagen: "pulsera_3_render_1.jpg" },
-    18: { nombre: "Brazalete Felino", precio: 43000, imagen: "pulsera_4_render_1.jpg" },
-    19: { nombre: "Pulsera Charms AURA", precio: 14000, imagen: "pulsera_5_render_1.jpg" },
-    20: { nombre: "Malla de Oro Rosa", precio: 26800, imagen: "pulsera_6_render_1.jpg" }
-};
-
-let carritoCrudo = JSON.parse(localStorage.getItem('carritoAura')) || [];
-let carrito = carritoCrudo.filter(item => item.joya_id !== null && typeof item.joya_id !== 'object');
-
-function actualizarUI() {
-    const contenedor = document.getElementById('contenedor-carrito');
-    const totalElement = document.getElementById('total-carrito');
-    const indicador = document.getElementById('cart-indicator');
-
-    if (carrito.length === 0) {
-        contenedor.innerHTML = `<div class="text-center mt-5"><p class="text-muted font-serif" style="font-size: 1.2rem; font-style: italic;">Tu reserva está vacía.</p></div>`;
-        totalElement.innerText = "$ 0 MXN";
-        indicador.style.display = 'none';
-        return;
-    }
-
-    let htmlCarrito = '';
-    let total = 0;
-    let cantidadTotalPiezas = 0;
-
-    carrito.forEach((item, index) => {
-        const joya = catalogoJoyas[item.joya_id];
-        if (joya) {
-            const subtotal = joya.precio * item.cantidad;
-            total += subtotal;
-            cantidadTotalPiezas += item.cantidad;
-
-            htmlCarrito += `
-                <div class="cart-item d-flex align-items-center mb-4" style="border-bottom: 1px solid #eee; padding-bottom: 15px;">
-                    <img src="${joya.imagen}" alt="${joya.nombre}" loading="lazy" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px; margin-right: 15px;">
-                    <div class="cart-item-details flex-grow-1">
-                        <h6 class="cart-item-title font-serif mb-1" style="font-size: 1.1rem;">${joya.nombre}</h6>
-                        <p class="mb-1 text-muted" style="font-size: 0.8rem;">Cantidad: ${item.cantidad}</p>
-                        <p class="fw-medium mb-0" style="font-size: 0.9rem;">$ ${subtotal.toLocaleString()} MXN</p>
-                    </div>
-                    <button class="btn btn-sm" onclick="eliminarDelCarrito(${index})" style="background: none; border: none; color: var(--ciruela-oscuro); font-size: 1.2rem;">
-                        <i class="bi bi-x-circle"></i>
-                    </button>
-                </div>
-            `;
-        }
-    });
-
-    contenedor.innerHTML = htmlCarrito;
-    totalElement.innerText = `$ ${total.toLocaleString()} MXN`;
-    
-    indicador.innerText = cantidadTotalPiezas;
-    indicador.style.display = 'flex';
-    indicador.style.alignItems = 'center';
-    indicador.style.justifyContent = 'center';
-    indicador.style.fontSize = '9px';
-    indicador.style.color = 'white';
-}
-
-function agregarAlCarrito(idJoya, cantidad = 1) {
-    if (carrito.length > 0 && carrito[0].joya_id !== idJoya) {
-        mostrarToastVIP("Por protocolos de seguridad en tu certificado, procesa la compra de una pieza a la vez. Vacía tu bolsa primero.");
-        return;
-    }
-    
-    const itemExistente = carrito.find(item => item.joya_id === idJoya);
-    if (itemExistente) {
-        itemExistente.cantidad += cantidad;
-    } else {
-        carrito.push({ joya_id: idJoya, cantidad: cantidad });
-    }
-    
-    localStorage.setItem('carritoAura', JSON.stringify(carrito));
-    actualizarUI();
-    
-    const cartOffcanvas = new bootstrap.Offcanvas(document.getElementById('cartDrawer'));
-    cartOffcanvas.show();
-    
-    mostrarToastVIP("💎 Pieza añadida a tu selección.");
-}
-
-function eliminarDelCarrito(index) {
-    carrito.splice(index, 1);
-    localStorage.setItem('carritoAura', JSON.stringify(carrito));
-    actualizarUI(); 
-}
-
-async function procesarCheckoutCarrito() {
-    if (carrito.length === 0) {
-        mostrarToastVIP("Tu selección está vacía. Explora nuestro Atelier primero.");
-        return;
-    }
-
-    const usuarioActivo = localStorage.getItem('auraVIP_User');
-    if (!usuarioActivo) {
-        const cartElement = document.getElementById('cartDrawer');
-        const cartOffcanvas = bootstrap.Offcanvas.getInstance(cartElement);
-        if (cartOffcanvas) cartOffcanvas.hide();
-        setTimeout(() => { new bootstrap.Modal(document.getElementById('loginModal')).show(); }, 500);
-        return;
-    }
-
-    const boton = document.getElementById('btn-pagar-stripe');
-    if (boton) {
-        boton.innerText = "Auditando credenciales...";
-        boton.disabled = true;
-    }
-
-    try {
-        const {token, error} = await stripePublic.createToken(cardElement);
-
-        if (error) {
-            document.getElementById('card-errors').textContent = error.message;
-            if (boton) {
-                boton.innerHTML = 'Asegurar Inversión <i class="bi bi-arrow-right ms-2"></i>';
-                boton.disabled = false;
-            }
-            return; 
-        }
-
-        const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/procesar-pago-seguro', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                email: usuarioActivo,
-                items: carrito,
-                token: token.id 
-            })
-        });
-
-        const datos = await respuesta.json();
-
-        if (respuesta.status === 200) {
+            <p style="font-size: 14px; color: #444; margin-top: 30px;">Estimado cliente,</p>
+            <p style="font-size: 14px; color: #444; line-height: 1.5;">Hemos asegurado exitosamente su inversion en nuestra boveda central. A continuacion, los detalles de su transaccion:</p>
             
-            // ==========================================
-            // DISPARO GA4: CONVERSIÓN DE COMPRA REAL
-            // ==========================================
-            let itemsGA4 = carrito.map(item => {
-                let joya = catalogoJoyas[item.joya_id];
-                return {
-                    item_id: item.joya_id.toString(),
-                    item_name: joya.nombre,
-                    item_category: "Joyeria",
-                    price: joya.precio,
-                    quantity: item.cantidad
-                };
-            });
+            <div style="background-color: #f9f9f9; padding: 20px; margin: 25px 0; border-radius: 4px;">
+                <p style="margin: 0 0 10px 0; font-size: 13px; color: #333;"><strong>Pieza:</strong> {nombre_pieza}</p>
+                <p style="margin: 0 0 10px 0; font-size: 13px; color: #333;"><strong>Folio de Orden:</strong> {uuid_orden}</p>
+                <p style="margin: 0 0 10px 0; font-size: 13px; color: #333;"><strong>Fecha:</strong> {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
+                <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
+                <p style="margin: 0; font-size: 15px; color: #111; text-align: right;"><strong>Total: ${precio_mxn} MXN</strong></p>
+            </div>
             
-            let totalCompra = itemsGA4.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-
-            if (typeof gtag === 'function') {
-                gtag('event', 'purchase', {
-                    transaction_id: datos.orden_uuid || ("AURA_TX_" + Date.now()),
-                    affiliation: 'AURA Web Boutique',
-                    value: totalCompra,
-                    currency: 'MXN',
-                    items: itemsGA4
-                });
-            }
-            // ==========================================
-
-            localStorage.removeItem('carritoAura');
-            carrito = [];
-            actualizarUI();
-            cardElement.clear(); 
-
-            const cartElementUI = document.getElementById('cartDrawer');
-            const cartOffcanvas = bootstrap.Offcanvas.getInstance(cartElementUI);
-            if (cartOffcanvas) cartOffcanvas.hide();
-
-            mostrarAlertaVIP("Inversión Asegurada", "Tu adquisición ha sido capturada por la Bóveda Central. Los certificados están siendo generados y entregados.", "bi-shield-check");
-
-            setTimeout(() => { gestionarAccesoPerfil(); }, 2500);
-
-        } else {
-            mostrarAlertaVIP("Transacción Declinada", datos.mensaje || datos.detalle || "La entidad bancaria rechazó la operación.", "bi-x-circle");
-        }
-    } catch (error) {
-        mostrarToastVIP("Error: No se pudo enlazar con la pasarela.");
-    } finally {
-        if (boton) {
-            boton.innerHTML = 'Asegurar Inversión <i class="bi bi-arrow-right ms-2"></i>';
-            boton.disabled = false;
-        }
-    }
-}
-
-/* =========================================================
-   VISOR 3D (Renderizado desde el HTML - ESTRICTO WASD)
-   ========================================================= */
-function abrirModelo3D(modeloGlb) {
-    const contenedor = document.getElementById('contenedorEscena3D');
+            <p style="font-size: 12px; color: #777; text-align: center; margin-top: 40px;">En breve recibira un segundo correo con el Certificado de Autenticidad de su pieza.</p>
+        </div>
+    </body>
+    </html>
+    """
+    msg.attach(MIMEText(html, 'html'))
     
-    contenedor.innerHTML = `
-        <a-scene embedded vr-mode-ui="enabled: false" background="color: #f4f4f4">
-            <a-assets>
-                <a-asset-item id="modeloJoya" src="${modeloGlb}"></a-asset-item>
-            </a-assets>
+    try:
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login(remitente, password)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"❌ [SMTP ERROR - TICKET]: {str(e)}")
+        return False
+
+def enviar_certificado_html(destinatario, nombre_pieza, uuid_orden):
+    remitente = os.getenv("EMAIL_TALLER")
+    password = os.getenv("EMAIL_PASSWORD")
+    
+    msg = MIMEMultipart()
+    msg['From'] = f"AURA Alta Joyería <{remitente}>"
+    msg['To'] = destinatario
+    msg['Subject'] = f"💎 Certificado de Autenticidad: {nombre_pieza}"
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Jost:wght@300;400&display=swap" rel="stylesheet">
+    </head>
+    <body style="font-family: 'Jost', sans-serif; background-color: #f4f4f4; padding: 40px 20px; text-align: center; margin: 0;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 50px 40px; border: 1px solid #eaeaea; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+            <h1 style="font-family: 'Cormorant Garamond', serif; font-size: 36px; color: #222; letter-spacing: 6px; margin-bottom: 5px;">AURA</h1>
+            <p style="font-size: 11px; letter-spacing: 3px; color: #888; text-transform: uppercase; border-bottom: 1px solid #b76e79; padding-bottom: 20px; margin-top: 0;">
+                Alta Joyeria • Certificado de Propiedad
+            </p>
+            <p style="margin-top: 40px; font-size: 15px; color: #555; font-weight: 300;">Extendemos el presente documento para certificar la autenticidad y propiedad de la pieza:</p>
+            <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 28px; color: #b76e79; margin: 25px 0; font-style: italic;">{nombre_pieza}</h2>
+            <p style="font-size: 14px; color: #555; font-weight: 300; line-height: 1.6;">Forjada con los mas altos estandares eticos y de calidad, garantizando la pureza de sus materiales. Esta pieza pertenece oficialmente a la coleccion privada de su portador.</p>
+            <div style="margin-top: 40px; padding: 25px; background-color: #fcfcfc; border-left: 3px solid #b76e79; text-align: left;">
+                <p style="margin: 5px 0; font-size: 13px; color: #333;"><strong>FOLIO DE REGISTRO EN BOVEDA:</strong> <br><span style="font-family: monospace; color: #777; font-size: 12px;">{uuid_orden}</span></p>
+                <p style="margin: 15px 0 5px 0; font-size: 13px; color: #333;"><strong>FECHA DE EMISION:</strong> <br><span style="color: #555;">{datetime.now().strftime('%d/%m/%Y')}</span></p>
+            </div>
+            <p style="margin-top: 50px; font-size: 11px; color: #aaa; font-style: italic;">Este documento digital esta respaldado por los registros centrales del Atelier AURA.</p>
+        </div>
+    </body>
+    </html>
+    """
+    msg.attach(MIMEText(html, 'html'))
+    
+    try:
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login(remitente, password)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"❌ [SMTP ERROR - CERTIFICADO]: {str(e)}")
+        return False
+
+def enviar_codigo_email(destinatario, codigo):
+    remitente = os.getenv("EMAIL_TALLER")
+    password = os.getenv("EMAIL_PASSWORD")
+    
+    msg = MIMEMultipart()
+    msg['From'] = f"AURA Alta Joyería <{remitente}>"
+    msg['To'] = destinatario
+    msg['Subject'] = "AURA - Token de Seguridad VIP"
+    
+    html = f"""
+    <html>
+        <body style="font-family: sans-serif; text-align: center; color: #333;">
+            <h2>Autenticacion de Boveda AURA</h2>
+            <p>Tu token de acceso de 6 digitos es:</p>
+            <h1 style="letter-spacing: 5px; color: #5a2e3f;">{codigo}</h1>
+            <p style="font-size: 0.8rem; color: #777;">Este token expirara en 15 minutos. Si no solicitaste este acceso, por favor ignora este mensaje.</p>
+        </body>
+    </html>
+    """
+    msg.attach(MIMEText(html, 'html'))
+    
+    try:
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login(remitente, password)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"❌ [SMTP ERROR - TOKEN]: {str(e)}")
+        return False
+
+# ==========================================
+# RUTAS DE AUTENTICACIÓN VIP Y PERFIL
+# ==========================================
+
+@app.route('/api/crear-cuenta', methods=['POST', 'OPTIONS'])
+def crear_cuenta():
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+        
+    try:
+        data = request.json
+        usuario = data.get('usuario', '').strip()
+        telefono = data.get('telefono', '').strip()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '').strip()
+        
+        if not all([usuario, telefono, email, password]):
+            return jsonify({"mensaje": "Todos los campos son obligatorios"}), 400
             
-            <a-entity gltf-model="#modeloJoya" 
-                      position="0 0 -3" 
-                      scale="1.5 1.5 1.5">
-                <a-animation attribute="rotation" to="0 360 0" dur="15000" repeat="indefinite" easing="linear"></a-animation>
-            </a-entity>
+        res_existente = boveda.table('usuarios_vip').select('id').eq('email', email).execute()
+        if res_existente.data:
+            return jsonify({"mensaje": "Este correo ya esta registrado. Por favor, inicia sesion."}), 409
             
-            <a-camera position="0 0 0" look-controls="enabled: false" wasd-controls="enabled: true; acceleration: 65;"></a-camera>
+        codigo = str(random.randint(100000, 999999))
+        expiracion = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
+        hashed_pw = generate_password_hash(password)
+        
+        boveda.table('usuarios_vip').insert({
+            "usuario": usuario,
+            "telefono": telefono,
+            "email": email, 
+            "password_hash": hashed_pw,
+            "codigo_acceso": codigo, 
+            "expiracion_codigo": expiracion,
+            "cuenta_verificada": False
+        }).execute()
+        
+        enviar_codigo_email(email, codigo)
+        return jsonify({"mensaje": "Cuenta creada. Token enviado al correo."}), 200
             
-            <a-light type="ambient" color="#ffffff" intensity="0.8"></a-light>
-            <a-light type="directional" color="#ffffff" intensity="0.6" position="-1 2 1"></a-light>
-        </a-scene>
-    `;
-    
-    const visorModal = new bootstrap.Modal(document.getElementById('visor3DModal'));
-    visorModal.show();
-}
+    except Exception as e:
+        print(f"❌ [ERROR CREAR CUENTA]: {traceback.format_exc()}")
+        return jsonify({"mensaje": "Error interno del servidor"}), 500
 
-function limpiarVisor3D() {
-    const contenedor = document.getElementById('contenedorEscena3D');
-    contenedor.innerHTML = ''; 
-}
-
-/* =========================================================
-   SISTEMA DE AUTENTICACIÓN Y TRAZABILIDAD DE USUARIO
-   ========================================================= */
-let correoTemporal = ""; 
-
-function mostrarSeccion(seccion) {
-    const isLogin = seccion === 'login';
-    document.getElementById('auth-login-form').style.display = isLogin ? 'block' : 'none';
-    document.getElementById('auth-registro-form').style.display = isLogin ? 'none' : 'block';
-    
-    document.getElementById('tab-login').className = isLogin ? "btn btn-outline-dark mx-1 fw-bold" : "btn btn-outline-dark mx-1 text-muted border-0";
-    document.getElementById('tab-registro').className = !isLogin ? "btn btn-outline-dark mx-1 fw-bold" : "btn btn-outline-dark mx-1 text-muted border-0";
-    document.getElementById('auth-subtitle').innerText = isLogin ? "Accede a tu colección privada." : "Únete al círculo exclusivo de coleccionistas.";
-}
-
-async function procesarRegistro() {
-    const usuario = document.getElementById('reg-usuario').value.trim();
-    const telefono = document.getElementById('reg-telefono').value.trim();
-    const email = document.getElementById('reg-email').value.trim();
-    const password = document.getElementById('reg-password').value.trim();
-    const btn = document.getElementById('btn-registro');
-
-    if (!usuario || !telefono || !email.includes('@') || password.length < 4) {
-        mostrarToastVIP("Por favor, llena todos los campos correctamente.");
-        return;
-    }
-
-    btn.innerText = "Creando cuenta..."; btn.disabled = true;
-
-    try {
-        const res = await fetch('https://joyeria-aura-42ax.onrender.com/api/crear-cuenta', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ usuario, telefono, email, password })
-        });
-        const data = await res.json();
-
-        if (res.status === 200) {
-            correoTemporal = email;
-            transicionA2FA("Hemos enviado un token de verificación a tu correo.");
-            mostrarToastVIP("✉️ Token enviado con éxito.");
-        } else {
-            mostrarToastVIP("Aviso: " + data.mensaje);
-        }
-    } catch (error) {
-        mostrarToastVIP("Error de conexión con la bóveda.");
-    } finally {
-        btn.innerText = "Registrarse"; btn.disabled = false;
-    }
-}
-
-async function procesarLogin() {
-    const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value.trim();
-    const btn = document.getElementById('btn-login');
-
-    if (!email.includes('@') || !password) {
-        mostrarToastVIP("Por favor, ingresa tu correo y contraseña.");
-        return;
-    }
-
-    btn.innerText = "Verificando..."; btn.disabled = true;
-
-    try {
-        const res = await fetch('https://joyeria-aura-42ax.onrender.com/api/iniciar-sesion', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
-        const data = await res.json();
-
-        if (res.status === 200) {
-            correoTemporal = email;
-            transicionA2FA("Seguridad de Bóveda: Ingresa el token enviado a tu correo para acceder.");
-            mostrarToastVIP("✉️ Token de seguridad enviado.");
-        } else {
-            mostrarToastVIP(data.mensaje);
-        }
-    } catch (error) {
-        mostrarToastVIP("Error de conexión.");
-    } finally {
-        btn.innerText = "Entrar"; btn.disabled = false;
-    }
-}
-
-function transicionA2FA(mensaje) {
-    document.getElementById('auth-toggle-btns').style.display = 'none';
-    document.getElementById('auth-login-form').style.display = 'none';
-    document.getElementById('auth-registro-form').style.display = 'none';
-    document.getElementById('auth-paso-2').style.display = 'block';
-    document.getElementById('auth-subtitle').innerText = mensaje;
-}
-
-async function verificarCodigoAcceso() {
-    const codigo = document.getElementById('auth-codigo-input').value.trim();
-    const btn = document.getElementById('btn-verificar-codigo');
-
-    if (codigo.length < 5) {
-        mostrarToastVIP("Ingresa el token completo.");
-        return;
-    }
-
-    btn.innerText = "Validando..."; btn.disabled = true;
-
-    try {
-        const res = await fetch('https://joyeria-aura-42ax.onrender.com/api/verificar-codigo', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: correoTemporal, codigo })
-        });
-        const data = await res.json();
-
-        if (res.status === 200) {
-            localStorage.setItem('auraVIP_User', data.email); 
+@app.route('/api/iniciar-sesion', methods=['POST', 'OPTIONS'])
+def iniciar_sesion():
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+        
+    try:
+        email = request.json.get('email', '').strip().lower()
+        password = request.json.get('password', '').strip()
+        
+        res_usuario = boveda.table('usuarios_vip').select('*').eq('email', email).execute()
+        
+        if not res_usuario.data:
+            return jsonify({"mensaje": "El correo no esta registrado en nuestra boveda."}), 404
             
-            // ==========================================
-            // IDENTIFICADOR DE USUARIO EN GA4 (USER ID)
-            // ==========================================
-            if (typeof gtag === 'function') {
-                gtag('config', 'G-M7PVDXR98P', {
-                    'user_id': data.email
-                });
-            }
+        usuario = res_usuario.data[0]
+        
+        if not check_password_hash(usuario['password_hash'], password):
+            return jsonify({"mensaje": "Contrasena incorrecta."}), 401
             
-            const modalInstance = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
-            if (modalInstance) modalInstance.hide();
+        codigo = str(random.randint(100000, 999999))
+        expiracion = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
+        
+        boveda.table('usuarios_vip').update({
+            "codigo_acceso": codigo, 
+            "expiracion_codigo": expiracion
+        }).eq('email', email).execute()
+        
+        enviar_codigo_email(email, codigo)
+        return jsonify({"mensaje": "Credenciales correctas. Codigo 2FA enviado."}), 200
+        
+    except Exception as e:
+        print(f"❌ [ERROR INICIAR SESIÓN]: {traceback.format_exc()}")
+        return jsonify({"mensaje": "Error interno del servidor"}), 500
+
+@app.route('/api/verificar-codigo', methods=['POST', 'OPTIONS'])
+def verificar_codigo():
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+        
+    try:
+        email = request.json.get('email', '').strip().lower()
+        codigo = request.json.get('codigo', '').strip()
+        
+        res_usuario = boveda.table('usuarios_vip').select('*').eq('email', email).execute()
+        if not res_usuario.data:
+            return jsonify({"mensaje": "Usuario no encontrado"}), 404
             
-            mostrarAlertaVIP(
-                "Acceso Concedido", 
-                `Bienvenido de vuelta a tu colección privada, ${data.usuario || data.email}.`, 
-                "bi-unlock"
-            );
+        usuario = res_usuario.data[0]
+        
+        if usuario.get('codigo_acceso') != codigo:
+            return jsonify({"mensaje": "Token incorrecto"}), 401
             
-            reiniciarModalLogin();
-            gestionarAccesoPerfil(); 
-        } else {
-            mostrarToastVIP("Error: " + data.mensaje);
-        }
-    } catch (error) {
-        mostrarToastVIP("Error de conexión.");
-    } finally {
-        btn.innerText = "Verificar Token"; btn.disabled = false;
-    }
-}
+        expiracion_str = usuario.get('expiracion_codigo')
+        if expiracion_str:
+            expiracion = datetime.fromisoformat(expiracion_str.replace('Z', '+00:00'))
+            if datetime.now(timezone.utc) > expiracion:
+                return jsonify({"mensaje": "El token ha expirado"}), 401
+        
+        ahora = datetime.now(timezone.utc).isoformat()
+        
+        boveda.table('usuarios_vip').update({
+            "codigo_acceso": None, 
+            "ultimo_acceso": ahora,
+            "cuenta_verificada": True
+        }).eq('email', email).execute()
+        
+        return jsonify({"mensaje": "Acceso concedido", "email": email, "usuario": usuario['usuario']}), 200
+        
+    except Exception as e:
+        print(f"❌ [ERROR VERIFICAR CÓDIGO]: {traceback.format_exc()}")
+        return jsonify({"mensaje": "Error interno del servidor"}), 500
 
-function reiniciarModalLogin() {
-    document.getElementById('auth-toggle-btns').style.display = 'flex';
-    document.getElementById('auth-paso-2').style.display = 'none';
-    mostrarSeccion('login'); 
-    
-    document.getElementById('auth-codigo-input').value = "";
-    document.getElementById('login-email').value = "";
-    document.getElementById('login-password').value = "";
-    document.getElementById('reg-usuario').value = "";
-    document.getElementById('reg-telefono').value = "";
-    document.getElementById('reg-email').value = "";
-    document.getElementById('reg-password').value = "";
-    
-    correoTemporal = "";
-}
-
-/* =========================================================
-   MI BÓVEDA (Gestión del Panel de Perfil y Descargas)
-   ========================================================= */
-function gestionarAccesoPerfil() {
-    const usuarioActivo = localStorage.getItem('auraVIP_User');
-    
-    if (!usuarioActivo) {
-        const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-        loginModal.show();
-    } else {
-        const profileOffcanvas = new bootstrap.Offcanvas(document.getElementById('profileDrawer'));
-        profileOffcanvas.show();
-        cargarDatosPerfil(usuarioActivo);
-    }
-}
-
-async function cargarDatosPerfil(emailUsuario) {
-    document.getElementById('perfil-email').innerText = emailUsuario;
-    document.getElementById('perfil-nombre').innerText = "Cargando datos...";
-    document.getElementById('perfil-telefono').innerText = "Cargando...";
-    document.getElementById('perfil-pedidos-container').innerHTML = '<p class="text-muted" style="font-size: 0.9rem; font-style: italic;">Conectando con la bóveda central...</p>';
-
-    try {
-        const respuesta = await fetch('https://joyeria-aura-42ax.onrender.com/api/perfil-usuario', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: emailUsuario })
-        });
-
-        if (respuesta.status === 200) {
-            const datos = await respuesta.json();
-            document.getElementById('perfil-nombre').innerText = datos.usuario || "Coleccionista VIP";
-            document.getElementById('perfil-telefono').innerText = datos.telefono || "Teléfono no registrado";
+@app.route('/api/perfil-usuario', methods=['POST', 'OPTIONS'])
+def perfil_usuario():
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+        
+    try:
+        email = request.json.get('email', '').strip().lower()
+        
+        res_user = boveda.table('usuarios_vip').select('id, usuario, telefono').eq('email', email).execute()
+        
+        if not res_user.data:
+            return jsonify({"mensaje": "Usuario no encontrado"}), 404
             
-            const contenedorPedidos = document.getElementById('perfil-pedidos-container');
+        user_data = res_user.data[0]
+        usuario_id = user_data['id']
+        
+        res_pedidos = boveda.table('ordenes_compra').select('id, estado, fecha_creacion, joya_id').eq('usuario_id', usuario_id).order('fecha_creacion', desc=True).execute()
+        
+        historial = []
+        if res_pedidos.data:
+            for pedido in res_pedidos.data:
+                res_joya = boveda.table('joyas_stock').select('nombre').eq('id', pedido['joya_id']).execute()
+                nombre_pieza = res_joya.data[0]['nombre'] if res_joya.data else "Joya AURA"
+                
+                historial.append({
+                    "id_orden": pedido['id'],
+                    "estado": pedido['estado'],
+                    "fecha": pedido['fecha_creacion'],
+                    "nombre_joya": nombre_pieza
+                })
+                
+        return jsonify({
+            "usuario": user_data['usuario'],
+            "telefono": user_data['telefono'],
+            "pedidos": historial
+        }), 200
+
+    except Exception as e:
+        print(f"❌ [ERROR PERFIL]: {traceback.format_exc()}")
+        return jsonify({"mensaje": "Error interno del servidor"}), 500
+
+# ==========================================
+# PASARELA DE PAGO: STRIPE (WHITE-LABEL & TOKENIZADO)
+# ==========================================
+
+@app.route('/api/procesar-pago-seguro', methods=['POST', 'OPTIONS'])
+def procesar_pago_seguro():
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+
+    try:
+        data = request.json
+        email = data.get('email')
+        items = data.get('items', [])
+        token_stripe = data.get('token')
+
+        if not items or not token_stripe:
+            return jsonify({"mensaje": "Datos de compra incompletos"}), 400
+
+        res_user = boveda.table('usuarios_vip').select('id').eq('email', email).execute()
+        usuario_uuid = res_user.data[0]['id'] if res_user.data else None
+
+        monto_total_centavos = 0
+        cantidad_total = 0
+        
+        for item in items:
+            joya_id = int(item.get('joya_id'))
+            cantidad = int(item.get('cantidad', 1))
             
-            if (datos.pedidos && datos.pedidos.length > 0) {
-                let htmlPedidos = '';
-                datos.pedidos.forEach(pedido => {
-                    
-                    let botonDescarga = '';
-                    if (pedido.estado === 'PAGADO') {
-                        botonDescarga = `
-                        <div class="mt-2 text-end">
-                            <a href="https://joyeria-aura-42ax.onrender.com/api/descargar-certificado/${pedido.id_orden}" 
-                               target="_blank"
-                               class="btn btn-sm" 
-                               style="font-size: 0.75rem; letter-spacing: 1px; color: var(--oro-rosa-cenizo); border: 1px solid var(--oro-rosa-cenizo); border-radius: 4px; text-decoration: none; padding: 4px 10px; transition: all 0.3s ease;">
-                               <i class="bi bi-file-earmark-pdf me-1"></i> Obtener Certificado
-                            </a>
-                        </div>`;
-                    }
+            res_joya = boveda.table('joyas_stock').select('precio_centavos').eq('id', joya_id).execute()
+            if res_joya.data:
+                # --- PARCHE DE PRECIO APLICADO AQUÍ ---
+                # Esto transforma los "15" pesos de Supabase en "1500" centavos para Stripe automáticamente
+                precio_base_db = float(res_joya.data[0]['precio_centavos'])
+                monto_total_centavos += int(precio_base_db * 100 * cantidad)
+                cantidad_total += cantidad
 
-                    htmlPedidos += `
-                        <div class="mb-3 p-3" style="background-color: #fcfcfc; border-radius: 8px; border-left: 3px solid var(--oro-rosa-cenizo); box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
-                            <p class="mb-1 fw-bold font-serif" style="font-size: 1rem;">${pedido.nombre_joya}</p>
-                            <p class="mb-1 text-muted" style="font-size: 0.8rem;">Folio: ${pedido.id_orden.substring(0,8)}...</p>
-                            <p class="mb-1 text-muted" style="font-size: 0.8rem;">Fecha: ${new Date(pedido.fecha).toLocaleDateString()}</p>
-                            <span class="badge ${pedido.estado === 'PAGADO' ? 'bg-success' : 'bg-warning text-dark'}" style="font-size: 0.7rem; letter-spacing: 1px;">
-                                ${pedido.estado === 'PAGADO' ? 'ASEGURADO' : 'PENDIENTE DE PAGO'}
-                            </span>
-                            ${botonDescarga}
-                        </div>
-                    `;
-                });
-                contenedorPedidos.innerHTML = htmlPedidos;
-            } else {
-                contenedorPedidos.innerHTML = '<p class="text-muted" style="font-size: 0.9rem; font-style: italic;">Aún no tienes piezas en tu bóveda.</p>';
-            }
-        } else {
-            document.getElementById('perfil-nombre').innerText = "Error de conexión";
-            document.getElementById('perfil-pedidos-container').innerHTML = '<p class="text-danger" style="font-size: 0.9rem;">No pudimos sincronizar tu perfil.</p>';
-        }
-    } catch (error) {
-        document.getElementById('perfil-nombre').innerText = "Modo Sin Conexión";
-        document.getElementById('perfil-pedidos-container').innerHTML = '<p class="text-muted" style="font-size: 0.9rem;">Revisa tu conexión a internet.</p>';
-    }
-}
+        # Seguridad de la Pasarela: Evitar que se envíen menos de 10 pesos
+        if monto_total_centavos < 1000:
+             return jsonify({"mensaje": "Por seguridad bancaria, la inversión mínima es de $10.00 MXN."}), 400
 
-function cerrarSesionVIP() {
-    localStorage.removeItem('auraVIP_User');
-    
-    if (typeof gtag === 'function') {
-        gtag('config', 'G-M7PVDXR98P', { 'user_id': null });
-    }
-    
-    const profileElement = document.getElementById('profileDrawer');
-    const profileOffcanvas = bootstrap.Offcanvas.getInstance(profileElement);
-    if(profileOffcanvas) profileOffcanvas.hide();
-    
-    mostrarToastVIP("🔒 Bóveda cerrada. Hasta pronto.");
-}
+        primer_joya_id = int(items[0]['joya_id'])
 
-function seleccionarYGuiar(idJoya) {
-    agregarAlCarrito(idJoya);
-    
-    const modal = bootstrap.Modal.getInstance(document.getElementById('welcomeGuideModal'));
-    if(modal) modal.hide();
-    
-    document.getElementById('galeria').scrollIntoView({ behavior: 'smooth' });
-    
-    mostrarToastVIP("Excelente elección. Hemos reservado tu pieza en tu bolsa.");
-}
+        cargo = stripe.Charge.create(
+            amount=monto_total_centavos,
+            currency="mxn",
+            source=token_stripe,
+            description=f"Inversión AURA - Usuario: {email}"
+        )
+
+        res_orden = boveda.table('ordenes_compra').insert({
+            'usuario_email': email,
+            'usuario_id': usuario_uuid,
+            'joya_id': primer_joya_id, 
+            'cantidad': cantidad_total,
+            'monto_total_centavos': monto_total_centavos,
+            'estado': 'PAGADO', 
+            'stripe_charge_id': cargo.id
+        }).execute()
+        
+        orden_uuid = res_orden.data[0]['id']
+
+        res_joya = boveda.table('joyas_stock').select('nombre').eq('id', primer_joya_id).execute()
+        nombre_joya = res_joya.data[0]['nombre']
+        precio_formateado = f"{(monto_total_centavos / 100.0):,.2f}"
+
+        enviar_ticket_compra_html(email, nombre_joya, orden_uuid, precio_formateado)
+        enviar_certificado_html(email, nombre_joya, orden_uuid)
+
+        return jsonify({
+            "estatus": "CONFIRMADO", 
+            "orden_uuid": orden_uuid,
+            "mensaje": "Transacción exitosa. Revisar bandeja de entrada."
+        }), 200
+
+    except stripe.error.CardError as e:
+        return jsonify({"mensaje": "La tarjeta fue declinada.", "detalle": str(e)}), 402
+    except stripe.error.StripeError as e:
+        return jsonify({"mensaje": "Error en la pasarela de pagos.", "detalle": str(e)}), 400
+    except Exception as e:
+        print(f"❌ [ERROR PROCESAR PAGO]: {traceback.format_exc()}")
+        return jsonify({"mensaje": "Error interno en el procesamiento"}), 500
+
+
+@app.route('/api/webhook/stripe', methods=['POST'])
+def webhook_stripe():
+    payload = request.data
+    sig_header = request.headers.get('Stripe-Signature')
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError as e:
+        return jsonify({"error": "Payload invalido"}), 400
+    except stripe.error.SignatureVerificationError as e:
+        return jsonify({"error": "Firma invalida"}), 400
+
+    if event['type'] == 'charge.succeeded':
+        charge = event['data']['object']
+        print(f"✅ [WEBHOOK AUDIT]: Cargo {charge['id']} verificado exitosamente.")
+        
+    elif event['type'] == 'charge.refunded':
+        charge = event['data']['object']
+        boveda.table('ordenes_compra').update({"estado": "REEMBOLSADO"}).eq('stripe_charge_id', charge['id']).execute()
+        print(f"⚠️ [WEBHOOK AUDIT]: Cargo {charge['id']} reembolsado.")
+
+    return jsonify({"status": "success"}), 200
+
+# ==========================================
+# GENERADOR DE CERTIFICADOS PDF
+# ==========================================
+
+@app.route('/api/descargar-certificado/<orden_uuid>', methods=['GET'])
+def descargar_certificado(orden_uuid):
+    try:
+        res = boveda.table('ordenes_compra').select('joya_id, fecha_creacion, monto_total_centavos').eq('id', orden_uuid).execute()
+        if not res.data:
+            return jsonify({"mensaje": "Orden no encontrada"}), 404
+            
+        orden = res.data[0]
+        
+        res_joya = boveda.table('joyas_stock').select('nombre').eq('id', orden['joya_id']).execute()
+        nombre_joya = res_joya.data[0]['nombre'] if res_joya.data else "Joya AURA"
+        precio_formateado = f"{(orden['monto_total_centavos'] / 100.0):,.2f}"
+
+        pdf = FPDF(orientation='P', unit='mm', format='A4')
+        pdf.add_page()
+        
+        # Cabecera
+        pdf.set_font('helvetica', 'B', 24)
+        pdf.cell(0, 20, 'AURA', ln=True, align='C')
+        
+        pdf.set_font('helvetica', 'I', 10)
+        pdf.set_text_color(150, 150, 150)
+        pdf.cell(0, 10, 'CERTIFICADO DE AUTENTICIDAD Y PROPIEDAD', ln=True, align='C')
+        pdf.line(20, 45, 190, 45)
+        
+        # Cuerpo
+        pdf.ln(20)
+        pdf.set_font('helvetica', '', 12)
+        pdf.set_text_color(50, 50, 50)
+        pdf.cell(0, 10, 'Se certifica la adquisicion de la pieza:', ln=True, align='C')
+        
+        pdf.ln(10)
+        pdf.set_font('helvetica', 'B', 20)
+        pdf.set_text_color(183, 110, 121) 
+        pdf.cell(0, 10, nombre_joya, ln=True, align='C')
+        
+        # Detalles
+        pdf.ln(20)
+        pdf.set_font('helvetica', '', 10)
+        pdf.set_text_color(50, 50, 50)
+        pdf.cell(0, 8, f"Folio de Boveda: {orden_uuid}", ln=True, align='L')
+        pdf.cell(0, 8, f"Fecha de Adquisicion: {orden['fecha_creacion'][:10]}", ln=True, align='L')
+        pdf.cell(0, 8, f"Inversion: ${precio_formateado} MXN", ln=True, align='L')
+        
+        # Pie
+        pdf.ln(30)
+        pdf.set_font('helvetica', 'I', 9)
+        pdf.set_text_color(150, 150, 150)
+        pdf.multi_cell(0, 5, 'Esta pieza ha sido forjada en nuestro Atelier siguiendo los mas estrictos controles de calidad, garantizando la pureza de sus materiales y el origen etico de sus gemas.', align='C')
+
+        pdf_bytes = bytes(pdf.output())
+        
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'Certificado_AURA_{str(orden_uuid)[:8]}.pdf'
+        )
+
+    except Exception as e:
+        print(f"❌ [ERROR PDF]: {traceback.format_exc()}")
+        return jsonify({"mensaje": "Error al generar certificado"}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
